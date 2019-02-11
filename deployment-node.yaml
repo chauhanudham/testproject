@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: nodejs-demo
-        image: udham/nodejsapp:latest
+        image: <image_name>
         ports:
         - name: nodejs-port
           containerPort: 8080
