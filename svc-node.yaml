@@ -1,0 +1,12 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: helloworld-v1
+spec:
+  ports:
+  - port: 8050
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: helloworld-v1
