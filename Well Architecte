@@ -1,0 +1,437 @@
+---------------------------------------------------------------------
+                         Well architect framework 
+---------------------------------------------------------------------
+
+Overview ---> Recommendation ---> Identify ---> Tools & Techniques
+
+Operational excellence --> Security --> Reliability --> Performance Efficiency --> Cost Optimization 
+
+---------------------------------------------------------------------
+                    1.  Operational excellence
+---------------------------------------------------------------------
+
+Operation Priority
+Workload Telemetry
+Continuous Integration
+Deployment Management
+Operation Capability & Readiness
+Workload & Operation Health
+Operation Management
+Operation Optimization.0000000
+
+-------> Operation Priority
+Make on board and operation evaluation process
+Create Portfolio for different cloud services
+Introduce mechanism that enforce compliance & standard
+Better Service recommendation like auto-scaling and lamda function, AWS Trusted Advisor, EBS type, S3 to Glacier, 
+for caching cloud front, Elastic cache .
+
+--------> Workload Telemetry
+Implement application flow of transaction across the workload
+Configure workload to emit information about dependence (external DB, network connectivity etc)
+Configure workload to emit information about internal state & current status (API Call volume, http status codes, scaling events etc.) 
+
+--------> Continuous Integration
+All build & packaging must be created and deploy using automated process
+Integrated test suite in build pipeline
+Integrate plugin such as sonar for code quality
+Reduce impact of changes using frequent, small & reversible changes.
+Integrate with Reporting and ticket tool
+Tools : Jenkins , hudson
+
+--------> Deployment Management
+Create & Apply rollback policy
+On demand automated environment creation & deletion
+Create & use deployment management system to track & implement change
+Follow frequent, small and reversible changes
+
+--------> Operation Capability & Readiness
+
+Consistent review of operational readiness of the teams, and  the workload, and  security consideration
+Enable review and version control for automated code
+Define & manage processes to investigate issues.
+Configure orchestration management tool & automated scripts
+Tools : AWS Config, Ansible, Cloudformation, Git/svn, AWS SSO
+
+-------- > Workload & Operation Health
+Define workload and operation metrics --->  Prometheus and Nagios as monitoring tool
+Implement monitoring tool & dashboard ---> Manage user for dashboard access
+Implement key indicator for monitoring & alerting   ---> Define warning & Critical limit & SNS based Alerting/Notification
+Establish action & process for alarming situation
+Identify and capture expected patterns
+
+--------> Operation Management
+Define operation process for event, incident & problem management
+Define process for escalation
+Create automate response & Notification
+Identify and capture patterns to automate response for next time
+Tools : LogRhythm, Elk , 
+
+--------> Operation Optimization
+Define process for continuous improvement
+Review operation metrics regularly
+Explore new tool & services that can help in operation tasks
+Build culture of knowledge sharing/ lessons learned
+Learn from  mistakes and  build more mature operation approach
+Tools : Create Metrics report for review & feedback 
+
+---------------------------------------------------------------------
+                    2.  Security 
+---------------------------------------------------------------------
+
+Credentials & Auth Management
+Access & User Management and Application Access Management
+Security Incident & Event Management 
+Thread detection & Protection
+Network Protection
+Compute Protection
+Data Security (Classification)
+Data Security (AT Rest)
+Data Security (AT Transit)
+Incident Management
+
+
+---------> Credentials & Auth Management
+Secure root account credentials in digital vaults and use MFA
+Ensure API and automated access, scripts, etc. are secure.
+Consistently apply access policies to administrators that may have access to multiple cloud, on-premises and 
+other environments (leverage AD credentials) 
+Remove all embedded API keys and secrets from scripts, automation tools
+Never provide human users direct access to API keys. 
+Tools : CyberArk Digital Vault to help organizations protect their highly sensitive privileged account information.
+
+---------> Access & User Management and Application Access Management
+Define human access requirements
+Define programmatic access requirements
+Grant least privileges
+Allocate unique credentials for each individual
+Manage credentials based on user lifecycles
+Automate credential management
+Grant access through roles or federation
+Implement dynamic authentication
+Tools : IAM specific configuration and Remove insecure configurations, Configure programmatic access
+
+---------> Security Incident & Event Management 
+Define requirements for logs, metrics & alerts .
+Analyze the logs centrally & develop investigation process.
+Automate alerting on key indicators
+Log Sources for AWS Events like AWS CloudTrail Events, AWS CloudWatch Events and Alarms, AWS Config Events
+Evaluate and enable the logging capabilities of all the services in use
+
+---------> Thread detection & Protection
+Evaluate and enable the logging capabilities of all the services in use
+Security team to monitor, inspect and address any threats on the system from any geographical location including inside premise on the system. 
+AWS GuardDuty for PortProbe and malicious activity like data mining 
+CDN tools like Cloudfront and cloudfare for AWS
+WAF implementation over application layer for web based applications for XSS and SQL injection and DDOS over webserver
+AWS Shield to protect against DDOS
+AWS inspector Scans 
+AWS Trusted Advisor for port enablement 
+
+--------> Network Protection
+Define policy for Network Monitoring and Protection
+Implement Secure Network Architecture
+Secure Access Points
+Enable Transmission Protection
+Implement Corporate Segregation
+Implement Fault-Tolerant Design
+segregation devices all requests are reviewed and approved by the applicable service owner 
+Connect accesspoint via HTTP or HTTPS using Secure Sockets Layer (SSL), a cryptographic protocol
+Prohibited Activities are DoS, DDoS, Port flooding, Protocol flooding , Request flooding 
+
+---------> Compute Protection
+Scan for and patch vulnerabilities
+Automate configuration management
+Automate compute protection
+Reduce attack surface
+Implement managed services
+Implement file integrity controls to reduce the risk of malicious software or adversaries modifying files --> like ossec and Elk 
+Use OWASP source code analysis tools like BurpSuite , nmap, checkmarks 
+
+--------> Data Security (Classification)
+What data types are available, where the data is located, access levels, and protection of the data (for example, through encryption access control).
+You can define levels of access to the AWS KMS encryption keys through key policies to ensure that appropriate services have access to the sensitive 
+content through a secure mechanism
+AWS KMS : It allows you to define encryption keys, encrypt data, and protect keys with IAM and access policies. 
+AWS CloudHSM : It provides a hardware security module for managing your keys
+AWS Identity and Access Management (IAM) : It enables you to manage access to AWS services and resources securely. 
+
+---------> Data Security (AT Rest)
+Define your encryption standard based on the latest available and supported encryption ciphers and protocols.
+workloads using Amazon S3 and Eb, consider using AWS Key Management Service (AWS KMS) for encryption at rest.
+Define your data retention requirements. These include the length of time you need to keep different types of data, and the number of previous versions and copies. 
+Tools : AWS Config : Detect buckets that are open.
+
+---------> Data Security (AT Transit)
+Define encryption standards: Your encryption standard should be based on the latest available and supported encryption ciphers and protocols.
+Define certificate management solution: For example, for workloads that use HTTPS, consider using AWS Certificate Manager (ACM) for managing
+ SSL/TLS certificates.
+Implement secure protocols: Use secure protocols that offer authentication and confidentiality, such as Transport Layer Security (TLS) or IPsec,
+to reduce the risk of data tampering or loss.
+Tools: AWS KMS : It allows you to define encryption keys, encrypt data, and protect keys with IAM and access policies. 
+AWS Certificate Manager : Implement your defined secure key and certificate management solution.
+CloudFront : Configure HTTPS with Amazon CloudFront and required ciphers.
+AWS VPN: Consider using an IPsec VPN for securing point-to-point or network-to-network connections to provide both data privacy and integrity.
+
+---------> Incident Management 
+Build up a support team on cross functional skills to monitor and support product for 24*7 availability
+Identify and define outages in under the category of prioritization
+Define and agree to the SLAs with customers
+Setup monitoring and alarm mechanism for downtime or threshold breach for all related services and operations
+Define escalation matrix and communication channel for a high Priority incident (P1/P2)
+Compute:-AWS Cloudwatch Monitoring Tool enabled and other monitoring tools . 
+
+---------------------------------------------------------------------
+                    3.  Reliability 
+---------------------------------------------------------------------
+
+Service Limit
+Network Topology
+Workload Reliability Management
+Resource Monitoring
+Change Management
+Data Backup
+Sustainability
+Resilience Measurement
+Disaster Recovery
+
+---------> Service Limit
+Monitor & Manage Service Limit​
+Manage gap between service limit &  usage​
+Identify service limits across all relevant accounts, regions and availability zone​
+Apply Automated solution to find Service Limit​ .
+
+--------> Network Topology
+Define network of your VPC based on Identified size of  previous network workload and expected future demand ​
+Define proper cidr and avoid overlapping of private IP’s range​
+Define you on prem to cloud connectivity  process
+Tools : Isolation of private subnets with internet, Site 2 Site VPN ​and VPC Peering
+
+--------> Workload Reliability Management
+To save cost plan and use Reserved Instances​
+Implement proper capacity planning​
+Test your workload scaling up or down​
+Analyze stats for correct instance size ​
+Use spot and reserved instance for the minimum load guaranteed​
+
+--------> Resource Monitoring
+Make resource review process​
+Define KPI for monitoring​
+Integrate alerting for event​
+Setup centralize logging  solution
+Nagios, Zabix for Infra monitoring​
+Create dashboard & User for different teams​ .
+
+--------> Change Management
+Understand how user maintain changes in their existing environment
+Define workflow for automated integration​ .
+Create automated script to deliver repeated tasks​ .
+Automated notification and assign process ​
+Avoid unplanned changes 
+
+--------> Data Backup
+Making an architecture as highly available one includes continuous and automated process for taking backup. & Restore​
+Identify all data(EBS/EFS/s3/RDS)that needs to be backup​
+Continuous and automated process for backup ​
+Encryption of backups is recommended to keep it secure​
+Backups should be taken in different availability zones/regions/account.​
+Define frequency of backup based on RPO​
+Define retention for backup data​
+Perform Recovery Test to validate RPO & RTO​
+Automated and Continuous Snapshots ​
+Encryption of snapshots​
+Encrypted S3 buckets for data backups​
+
+--------> Sustainability
+The ability to sustain to the failures and maintain at certain level​
+Enable monitoring to detect the failures of services.​
+Remove the dependencies by decoupling the tightly coupled modules (Stateless)​
+Architecture with High availability is recommended​
+Use Notification and Email services to notify about the impacted availability zones.​
+Implement Self healing​
+Tools : Multi – AZ Deployment​
+Continuous and Automated backups​
+Monitoring different layers using tools/services like Nagios, Grafana, AWS CloudWatch etc.​
+
+--------> Resilience Measurement
+The elasticity  and the ability  of a cloud service to spring into shape from failure.​
+Define a risk factor for the services.​
+Inject failure  to test  resiliency​
+Take precautions for unanticipated failures​
+Standardized RCA process​
+Prepare & Analyze pattern of the failures 
+
+---------> Disaster Recovery
+Disaster recovery involves a set of policies, tools and procedures to enable the recovery or continuation of vital technology infrastructure 
+and systems following a natural or human-induced disaster.​
+Define DR Plan (RPO, RTO)​
+Perform disaster recovery test to validate RPO & RTO​
+Up-to-date AMI  and system configuration​
+Multi A-Z deployment based on criticality​
+Continuous health check​
+Time to time snapshots of the instances​
+Automated backups of the AMIs​
+Use of Auto Scaling Groups & Elastic Load Balancer for different tiers of application​
+Use Ansible & cloud formation based automated resource creation  & configuration​
+Use Inventory management in case of re provisioning resources or services.​
+
+---------------------------------------------------------------------
+                    4.  Performance Efficiency
+---------------------------------------------------------------------
+Architecture Design
+Compute Resources​
+Storage Resources​
+Database Resources​
+Networking Resources​
+Performance Optimization (latest release)​
+Performance Measurement​
+Performance Optimization (Tradeoff)​
+
+---------> Architecture Design
+Define a process for architectural choices.​
+Always ensure cost factor must be the key component in the discussion of Architectural Design.​
+Support from standard policies and existing architectures must be taken.​
+Use guidance from AWS or APN partners​
+Estimate the application sizing​
+Considering cost, choose resources which are computationally optimized, highly efficient and scalable​
+Try to choose resources in the region nearest to the location.​
+Use Content Delivery Network for static content​
+Sticky Sessions and Stateless Sessions must be made in use​
+Elastic Cache should be used for frequently accessed data.​
+
+---------> Compute Resources​
+
+Consider Memory utilization, CPU utilization, I/O operations to selected right compute resource.​
+When selecting instance families and types also consider the configuration options that your workload needs​
+Use Serverless architectures wherever possible​
+Create & Analysis compute related metrics for better planning
+
+----------> Storage Resources​
+Performance can be measured by looking at throughput, input/output operations per second (IOPS), and latency.​
+Choose type of storage on the basis of Latency, Throughput and the capability of sharing.​
+Identify the storage performance metrics that matter for your workload​
+Access patterns should be well defined for the retrieval.​
+Tools : 
+Bucket policy for Aws S3 to transfer data between different classes of S3​
+EFS for Multiple throughput & clients​
+EBS & instance stores for backups via snapshots.​
+Glacier for archival
+
+--------> Database Resources​
+Database solution for a particular system can vary based on your requirements for availability, consistency, partition tolerance, latency, 
+durability, scalability, and query capability​.
+Access Patterns should be well define to choose the best suited database technology.​
+Categorization of data workload
+Introduce Partitioning to optimize database engine​.
+AWS Aurora with top tier performance without licensing constraints for MySQL & PostgreSQL​ .
+
+--------> Networking Resources​
+The network should be latency free to give efficient performance and various services could be used to achieve this.​
+Network metrics and compliance needs to be implement​ .
+Choose Region based on application’s user locality​
+Application Code should execute as close to the data as possible.​
+Optimize network configuration based on metrics​
+Tools : 
+Placement Groups ​
+Edge Locations for latency sensitive services (CDN and DNS)​
+Latency Based Routing (Route 53)​
+VPC endpoints for communication between AWS services.​
+AWS Config for audit & compliance of network resources
+
+-------> Performance Optimization
+Keep up to date on new resources and services​
+Define a process to improve workload performance​
+Evolve workload performance over time​
+Evaluate updates and releases​
+Update previous resources with generation resources​
+Use workload data from the metrics to evolve by time
+
+-------> Performance Measurement 
+System performance can degrade over time. Monitoring and measuring performance is a must to keep a control over performance efficiency.​
+Use monitoring dashboard to analyze metrics when incident occur.​
+Establish KPIs to measure workload performance.​
+Monitor and alarm proactively​
+Review metrics at regular intervals​
+Data driven approach to evolve architecture​
+Tools : 
+Record performance data​
+Monitor performance during operations.​
+Constantly improve metric collection and monitoring​
+Use sanitized version of production data for load testing. ​
+
+-------> Performance Optimization ( Trade off)
+Tradeoffs impact the whole architecture of the application and may result in redesigning it.​
+Understand the areas where performance is most critical​
+Explore the design patterns and services​
+Identify the impact on customers and efficiency of application ​
+Measure the impact of performance improvements​
+Use performance related strategies.​
+Identify areas of poor performance and how they can be improved.​
+
+---------------------------------------------------------------------
+                    5.  Cost Optimization 
+---------------------------------------------------------------------
+
+Usage Governance​
+Usage and Cost Monitor
+Resource Decommission
+Cost evaluation
+Capacity Planning​
+Pricing Model​
+DataTransfer Optimization
+Workload Demand​
+Workload Cost Optimization​
+
+--------> Usage Governance​
+Apply & use proper naming convention so that optimization  tool can scan and estimate right cost of workload​
+Apply cost usage notification​
+Establish accountabilities for developer, business owners and other involve person
+Tools : 
+AWS Config for scanning roles & policy​ .
+Use cloudhealth for limit notification​ .
+
+--------> Usage and Cost Monitor
+Use organization based approach to maintain different AWS account.​
+Cost allocation tags are enabled​
+Naming convention apply for new infrastructure​
+Configured Cost & Usage report
+Use Cloudhealth as a cost optimization tool
+Monitor cost proactively
+
+--------> Resource Decommission
+Establish decommission process​
+Apply automated process to find out underutilized resources.​
+Can use tag based automated process for decommission resources​
+Use Service catalog based Commissioning/ Decommissioning​ process
+
+---------> Cost evaluation
+Perform time based cost analysis of workload​
+Use Components & services that have no or minimum licensing cost​
+If possible use common services in shared mode​
+
+---------> Capacity Planning​
+Can we choose right resource type & size​ and unused , properly configured​ .
+Take decision based on type of workload (compute, memory, read intensive etc)​ .
+Review existing workload metrics to select right size & type​ .
+Configure auto scaling to manage dynamic load .
+
+---------> Pricing Model​
+identify permanent running resources of your workload and that should be move to the reserved instances.​
+For time insensitive short term workload should be run on spot instances.​
+Use On demand instances for short term or unpredictable workloads​
+
+---------> DataTransfer Optimization
+The Data transfer cost is in consideration of cost saving optimization but process and best practices needs to be
+implement.​
+Use CDN to deliver static content, use AWS direct connect instead of VPN for connectivity to AWS.​
+Review data transfer cost regularly​ .
+
+---------> Workload Demand​ & Cost Optimization​
+Use time based scheduling to create and terminate resources for predictable workload​
+Use Auto scaling feature for unpredictable & time sensitive workloads​
+Use container or serverless based approach where ever is possible​
+Establish a process of regularly analysis of cost effective services for existing  workload.​
+Establish a process to review current workload architecture.​
+
+
+ 
