@@ -1,0 +1,283 @@
+                                                     ### KUBERNETES COMMANDS ###
+---------------------------
+Kubernetes ClusterInfo
+---------------------------
+kubectl config
+kubectl cluster-info
+kubectl get componentstatus
+kubectl get -- raw/apis/metrics.k8s.io/
+kubectl -h 
+kubectl create -h 
+kubectl run -h 
+kubectl explain deploy.spec
+kubectl api-versions
+
+kubectl exec -it pod-1 -- ping 1.1.1.1 
+
+kubectl exec -it fccustartifacts-0 bash -n dev
+
+kubectl get netpol 
+--------------------------
+Kubernetes Pods 
+--------------------------
+kubectl get pods or po
+kubectl get po -o wide
+kubectl get po -l app=nginx
+kubectl get po -o yaml
+kubectl get pod [pod_name] -o yaml --export
+kubectl get pod [pod_name] -o yaml --export > name file.yaml
+kubectl get po [pod_name] -o yaml --export > pod.yaml
+kubectl get pods --field-selector status.phase=Running
+kubectl get po --show-labels
+kubectl get pods --show-labels
+kubectl edit pods [pod_name]
+kubectl get po -n kube-system
+kubectl get po -o wide -n kube-system
+kubectl describe pods [pod_name]
+kubectl describe  pods | grep  "Image: "
+kubectl describe pods  au-kit-idp-deployment-7cdc5f8df8-fqnbc | grep "image" -i
+kubectl describe pod gateway-uat-ms-deployment-7ff7874bb6-hzcvt | grep i3c 
+kubectl delete po [pod_name]
+kubectl delete  pods  name -n kube-system 
+kubectl delete pods --all
+kubectl run [ pod_name] --image=busybox --rm -it --restart=Never -- sh    ---> Interactive pod 
+kubectl exec dev-test-kubeadm-cs-deployment-56f4fc4dcd-thhdd -i -t bash 
+
+--------------------------
+Kubernetes Node & label 
+-------------------------
+kubectl get node
+kubectl get nodes  --show-labels
+kubectl get no -o wide
+kubectl get no -o yaml
+kubectl get node --selector=[label_name] 
+kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}'
+kubectl top node [node_name]
+kubectl describe node ip-172-21-11-245.ec2.internal
+kubectl delete node ip-172-21-0-240.ec2.internal 
+kubectl label nodes <node-name> <label-key>=<label-value>   
+kubectl label nodes ip-172-21-8-26.ec2.internal idp=Gateway_UAT-idp
+kubectl label nodes ip-172-21-8-26.ec2.internal idp-
+kubectl label [pod-name] env=prod 
+kubectl edit node [node_name]
+
+------------------------------
+Kubernetes Deployment& Replica
+------------------------------
+kubectl get deployment [deployment_name] 
+kubectl describe deployment [deployment_name]
+kubectl create -f [deployment_name]
+kubectl apply -f [deployment_name] 
+kubectl delete -f [deployment_name]
+kubectl create deployment gateway-deployment 
+kubectl create deploy [deploy_name]--image=nginx--dry-run -o yaml > deploy.yaml
+kubectl edit deployment [deployment_name]
+kubectl expose deployment [deployment_name] --port=80 --type=NodePort
+kubectl delete deployment [deployment_name]
+kubectl scale deployment [deployment_name] --replicas=5
+kubectl get rs
+kubectl get rs -o yaml 
+kubectl scale --replica=4 -f (Filepath)
+kubectl scale --replica=1  rc/podname 
+kubectl rolling-update 
+kubectl rolling-update frontend --image=image:v2
+
+------------------------------
+Kubernetes Services 
+------------------------------
+kubectl get svc
+kubectl get svc -o yaml 
+kubectl get svc nginx -o wide
+kubectl describe svc my-nginx
+kubectl get svc --show-labels
+kubectl edit svc [svc-name]
+kubectl delete svc [svc-name]
+kubectl create svc nodeport [svc_name] --tcp=8080:80
+
+------------------------------
+Kubernetes Configmaps
+------------------------------
+kubectl get cm 
+kubectl get cm --all-namespaces
+kubectl get cm --all-namespaces -o yaml 
+kubectl config current-context
+kubectl config use-context gateway-test-kubeadm
+kubectl create configmap ls-config --from-file=context.xml=/mnt/data/ls/config/83255/config/context.xml --from-file=server.xml=/mnt/data/ls/config/83255/config/server.xml
+kubectl create configmap special-config --from-literal=special.how=very --from-literal=special.type=charm   --from-file=abc.yaml
+kubectl get configmap  ls-config -o yaml
+kubectl describe configmaps ls-config
+kubectl delete configmap ls-config
+kubectl -n kube-system get cm kubeadm-config -oyaml     
+kubectl -n kube-system get cm kubeadm-config -oyaml
+
+------------------------------
+Kubernetes Namespaces 
+------------------------------
+kubectl get ns
+kubectl get ns -o yaml 
+kubectl get ns nginx -o wide
+kubectl describe ns my-nginx
+kubectl get ns --show-labels
+kubectl edit ns [ns-name]
+kubectl delete ns [ns-name]
+kubectl delete ns
+kubectl edit ns [ns_name]
+kubectl describe ns default 
+
+------------------------------
+Kubernetes Ingress 
+------------------------------
+kubectl get ing
+kubectl get ing --all-namespaces
+
+------------------------------
+Kubernetes Logs 
+------------------------------
+kubectl logs [pod_name]
+kubectl logs --since=1h [pod_name]
+kubectl logs --tail=20 [pod_name]
+kubectl logs -f -c [container_name] [pod_name]
+kubectl logs [pod_name] > pod.log
+
+------------------------------
+Kubernetes DaemonSets & Event
+------------------------------
+kubectl get ds
+kubectl get ds --all-namespaces
+kubectl describe ds [daemonset_name] -n [namespace_name]
+kubectl get ds [ds_name]-n [ns_name] -o yaml
+kubectl edit ds [ds-name] -n kube-system
+kubectl delete ds
+kubectl get events 
+kubectl get events -n kube-system
+kubectl get events -w
+
+------------------------------
+Kubernetes Secrets & Roles 
+------------------------------
+kubectl get secrets
+kubectl get secrets --all-namespaces
+kubectl get secrets -o yaml
+kubectl get roles --all-namespaces
+kubectl get roles --all-namespaces -o yaml 
+
+------------------------------
+Kubernetes ServiceAccount 
+------------------------------
+kubectl get sa
+kubectl get sa --all-namespaces
+kubectl get sa -o yaml
+kubectl get serviceaccounts default -o yaml> ./sa.yaml
+kubectl replace serviceaccount default -f ./sa.yaml 
+
+------------------------------
+Kubernetes StorageClass & Vol
+------------------------------
+kubectl get sc 
+kubectl get sc -o yaml 
+kubectl get pvc
+kubectl describe pvc
+kubectl get pv
+kubectl describe pv
+
+------------------------------
+Kubernetes Cordon/Uncordon 
+------------------------------
+kubectl cordon [node-name]
+kubectl uncordon [node-name]
+kubectl annotate node  [node-name]
+kubectl annotate po  [pod-name] [annotation]
+
+-------------------------------
+   Pod Policy 
+-------------------------------
+
+kubectl get psp eks.privileged  -o yaml
+
+
+------------------------------
+Kubernetes Token 
+------------------------------
+kubeadm join --token 777872.334da107b56fb0bd 54.86.126.86:6443 --discovery-token-ca-cert-hash sha256:08b409875f371cf24d42970b016b40621b8e68ee80c3b40c2cd61244eeeed1aa
+kubeadm token list
+kubeadm token delete 4572ec.b71b5142e54811da
+kubeadm token create 4572ec.b71b5142e54811da --ttl 0
+
+------------------------------------------
+Build on demand 
+------------------------------------------
+docker build . --no-cache --rm --file docker/dockerfile --tag ls:"$svn_branch_tmp"_"$svn_rev_num"
+docker tag ls:"$svn_branch_tmp"_"$svn_rev_num" i3clogic/ls:"$svn_branch_tmp"_"$svn_rev_num"
+docker login -u i3clogic -p sunday1980
+docker push i3clogic/ls:"$svn_branch_tmp"_"$svn_rev_num"
+docker rmi -f i3clogic/ms:"$svn_branch_tmp"_"$svn_rev_num"
+
+-----------------------------------------
+Deploy on demand 
+-----------------------------------------
+kubectl config current-context
+kubectl config use-context gateway-test-kubeadm
+kubectl delete configmap ls-config
+kubectl create configmap ls-config --from-file=context.xml=/mnt/data/ls/config/83255/config/context.xml --from-file=server.xml=/mnt/data/ls/config/83255/config/server.xml
+kubectl create -f /mnt/data/ls/config/83255/kubernetes/yaml/deployment.yaml
+kubectl apply -f /mnt/data/ls/config/83255/kubernetes/yaml/deployment.yaml
+kubectl create -f /mnt/data/ls/config/83255/kubernetes/yaml/service.yaml
+
+kubectl create -f <test.yaml> --dry-run pod never launch 
+
+
+helm template ./  --set global.baseAppLogDir=/opt/ciena/bp2/log,global.baseStorageDir="/opt/ciena/bp2",global.imageRegistry=bphub.blueplanet.com
+
+
+-----------------------------------------
+ Etcd Backup 
+-----------------------------------------
+etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt --key=/etc/kubernetes/pki/etcd/healthcheck-client.key snapshot save /backup/etcd-snapshot-$(date +%Y-%m-%d_%H:%M:%S_%Z).db"]
+
+https://labs.consol.de/kubernetes/2018/05/25/kubeadm-backup.html
+
+kubectl create -f <test.yaml> --dry-run pod never launch 
+
+-------------------------------------
+other commands
+-------------------------------------
+
+kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" |\tr -s '[[:space:]]' '\n' |\sort |\uniq -c  --> list all Images 
+
+-------------------------
+If new master setup 
+-------------------------
+ip link delete cni0
+ip link delete flannel.1
+
+Node Sides 
+Fannel container restart 
+docker [container-id] stop 
+
+###
+wget http://hpa-example.default.svc.cluster.local:31001
+
+while true; do wget -q -O- http://hpa-example.default.svc.cluster.local:31001; done
+
+---------------------------
+Tasks Services discovery 
+---------------------------  
+
+kubectl exec database -i -t -- mysql -u root -p
+
+kubectl run -i --tty busybox --image=busybox --restart=Never -- sh
+
+kubectl exec database -i -t bash
+
+Dns look like that : helloworld-db-service.default.svc.cluster.local:
+
+nslookup  helloworld-db-service
+
+----------------------------------------
+If i want to enter the container in pod 
+----------------------------------------
+
+kubectl exec  -i -t  podname -c conatiner name  -- bash  
+
+kubectl exec  -it  podname  -- nodetool status 
+

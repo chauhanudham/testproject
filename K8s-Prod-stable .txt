@@ -1,0 +1,319 @@
+                                            ***********KUBERNETE SETUP********************
+CentOS Linux 7 - ami-01d5b8c6e4958a724
+	  
+iptable -L 
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+modprobe br_netfilter
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+swapoff -a
+
+CentOS Linux 7 - ami-01d5b8c6e4958a724
+	  
+repo_gpgcheck=1   remove 
+
+Install docker
+ 
+wget https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-17.03.1.ce-1.el7.centos.x86_64.rpm 
+https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-selinux-17.03.1.ce-1.el7.centos.noarch.rpm   
+https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.0-2.2.rc.2.1.el7.x86_64.rpm 
+
+yum install yum-utils device-mapper-persistent-data lvm2  libtool-ltdl
+systemctl enable docker;systemctl start docker
+
+or 
+yum install -y --setopt=obsoletes=0 \
+  docker-ce-17.03.1.ce-1.el7.centos \
+  docker-ce-selinux-17.03.1.ce-1.el7.centos
+
+
+or 
+
+yum install -y yum-utils device-mapper-persistent-data lvm2
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum install -y docker-ce
+systemctl enable docker: systemctl start docker
+
+vim /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+yum install kubelet-1.11.0  kubeadm-1.11.0  kubectl-1.11.0  kubernetes-cni-0.6 
+systemctl enable kubelet ; systemctl start kubelet
+
+vim /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+sysctl --system
+
+Configure cgroup driver used by kubelet on Master Node and Make sure that the cgroup driver used by kubelet is the same as the one used by Docker
+docker info | grep -i cgroup
+sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf  
+  
+systemctl daemon-reload
+systemctl restart   kubelet
+
+####### Kubernetes Master 
+
+hostnamectl set-hostname kubeadm-uat-master
+
+vim /etc/hosts
+ip  kubeadm-uat-master
+
+kubeadm init  --pod-network-cidr=10.244.0.0/16   --apiserver-advertise-address=$(curl ifconfig.me)   >> cluster_initialized.txt
+
+kubeadm init  --pod-network-cidr=10.244.0.0/16   --token-ttl 0 
+or
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=Private ip   --kubernetes-version=v1.13.2
+or
+kubeadm init --apiserver-advertise-address 13.250.52.233 --pod-network-cidr 10.244.0.0/16 --service-cidr 10.166.0.0/16 --token-ttl 0 --node-name [DNS node name]
+or 
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=35.171.245.195 --token-ttl 0
+
+systemctl enable kubelet: systemctl start kubelet
+
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+
+kubeadm join --token 777872.334da107b56fb0bd 54.86.126.86:6443 --discovery-token-ca-cert-hash sha256:08b409875f371cf24d42970b016b40621b8e68ee80c3b40c2cd61244eeeed1aa
+kubeadm token list
+kubeadm token delete 4572ec.b71b5142e54811da
+kubeadm token create 4572ec.b71b5142e54811da --ttl 0
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml     ----> for site 
+or
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+or 
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml
+
+kubectl get pods --all-namespaces
+kubectl get po -o wide -n kube-system
+kubectl get pods 
+
+
+#####Add the below script in Mater ( Launch the Server in autoscaling )
+
+#!/bin/bash
+association_id=`aws ec2 describe-addresses --filters "Name=domain,Values=vpc" | grep 35.170.3.169 | awk '{ print $3 }'`
+allocation_id=`aws ec2 describe-addresses --filters "Name=domain,Values=vpc" | grep 35.170.3.169 | awk '{ print $2 }'`
+aws ec2 disassociate-address --association-id $association_id
+instance_id=`curl http://169.254.169.254/latest/meta-data/instance-id`
+aws ec2 associate-address --instance-id $instance_id --allocation-id $allocation_id
+hostnamectl set-hostname kubeadm-uat-master
+sleep 5
+reboot
+
+*************************************************************  Perform the following steps on each worker node  **************************************************
+
+##### Worker node-1 script For Automation  ( Launch the Server in autoscaling ) 
+
+#!/bin/bash
+mkdir /var/logs
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/logs/app-1 /var/logs
+sleep 5
+mkdir /opt/webastra
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/data/app-1 /opt/data/
+sleep 5
+kubeadm join --token 4572ec.b71b5142e54811da 1.2.3.4:6443 --discovery-token-ca-cert-hash sha256:c38b3a9a810aa38011d12eeabc2add82dc47e6fb24b4d6b0654eff392971cd4d
+sleep 60
+hostname=`curl http://169.254.169.254/latest/meta-data/local-hostname`
+ssh root@ec2-35-170-3-169.compute-1.amazonaws.com "kubectl label nodes $hostname Nodeselector=value"
+
+#####Worker node-2 script For Automation ( Launch the Server in autoscaling )
+
+#!/bin/bash
+mkdir /var/logs
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/logs/haproxy /var/logs
+sleep 5
+mkdir /opt/webastra
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/webastra/haproxy /opt/webastra
+sleep 5
+kubeadm join --token 8e8bfa.9bc4194f19e4b3cc 35.170.3.169:6443 --discovery-token-ca-cert-hash sha256:c38b3a9a810aa38011d12eeabc2add82dc47e6fb24b4d6b0654eff392971cd4d
+sleep 60
+hostname=`curl http://169.254.169.254/latest/meta-data/local-hostname`
+ssh root@ec2-35-170-3-169.compute-1.amazonaws.com "kubectl label nodes $hostname haproxy=SUPPORT-KIT-haproxy"
+__________________________________________________________________________________________________________________________________________________________________
+
+############################################################## Master etcd Backup  #####################################################################################
+***********config efs -
+
+service kubelet stop
+
+service docker stop
+
+
+mkdir -p /root/k8s-bkp
+
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-c960d529.efs.us-east-1.amazonaws.com:/ /root/k8s-bkp 
+
+cd /root/k8s-bkp
+
+mkdir -p kubernetes/
+
+cp -rf /var/lib/etcd /root/k8s-bkp/kubernetes/
+
+umount /root/k8s-bkp/
+lsof  /root/k8s-bkp
+
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-c960d529.efs.us-east-1.amazonaws.com:/kubernetes/etcd   /var/lib/etcd
+ 
+service kubelet start 
+
+service docker start 
+
+########################################################************KUBERNETES SOPRA SETUP********************###################################
+                                                                                                               
+AMI :-  Amzn2-ami-hvm-2.0.20190110-x86_64-gp2 (ami-0d53ac3145db0eace)
+      gpgcheck: yes
+
+CentOS Linux 7 - ami-01d5b8c6e4958a724
+	  
+iptable -L 
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+modprobe br_netfilter
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+swapoff -a
+
+yum install docker
+systemctl enable docker;systemctl start docker
+
+repo_gpgcheck=1   remove 
+
+vim /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1      
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+yum install kubelet kubeadm kubectl
+systemctl enable kubelet: systemctl start kubelet
+
+vim /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+sysctl --system
+
+Configure cgroup driver used by kubelet on Master Node and Make sure that the cgroup driver used by kubelet is the same as the one used by Docker
+docker info | grep -i cgroup
+sed -i 's/cgroup-driver=systemd/cgroup-driver=cgroupfs/g' /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+cat /etc/systemd/system/kubelet.service.d/10-kubeadm.conf  
+  
+systemctl daemon-reload
+systemctl restart   kubelet
+
+####### Kubernetes Master 
+
+hostnamectl set-hostname kubeadm-uat-master
+
+vim /etc/hosts
+ip  kubeadm-uat-master
+
+kubeadm init  --pod-network-cidr=10.244.0.0/16   --token-ttl 0 
+or
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=54.86.126.86
+or
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=Private ip   --kubernetes-version=v1.13.2
+or
+kubeadm init --apiserver-advertise-address 10.1.10.11 --pod-network-cidr 10.244.0.0/16 --service-cidr 10.166.0.0/16 
+or
+kubeadm init --apiserver-advertise-address 13.250.52.233 --pod-network-cidr 10.244.0.0/16 --service-cidr 10.166.0.0/16 --token-ttl 0 --node-name [DNS node name]
+or
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=Public ip   --kubernetes-version=v1.13.2
+or
+kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address=Public ip for master   
+
+systemctl enable kubelet: systemctl start kubelet
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+chown $(id -u):$(id -g) $HOME/.kube/config
+kubeadm join --token 777872.334da107b56fb0bd 54.86.126.86:6443 --discovery-token-ca-cert-hash sha256:08b409875f371cf24d42970b016b40621b8e68ee80c3b40c2cd61244eeeed1aa
+kubeadm token list
+kubeadm token delete 4572ec.b71b5142e54811da
+kubeadm token create 4572ec.b71b5142e54811da --ttl 0
+
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/bc79dd1505b0c8681ece4de4c0d86c5cd2643275/Documentation/kube-flannel.yml     ----> for site 
+or
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+or 
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml
+
+kubectl get pods --all-namespaces
+kubectl get po -o wide -n kube-system
+kubectl get pods 
+
+#####Add the below script in Mater 
+
+#!/bin/bash
+association_id=`aws ec2 describe-addresses --filters "Name=domain,Values=vpc" | grep 35.170.3.169 | awk '{ print $3 }'`
+allocation_id=`aws ec2 describe-addresses --filters "Name=domain,Values=vpc" | grep 35.170.3.169 | awk '{ print $2 }'`
+aws ec2 disassociate-address --association-id $association_id
+instance_id=`curl http://169.254.169.254/latest/meta-data/instance-id`
+aws ec2 associate-address --instance-id $instance_id --allocation-id $allocation_id
+hostnamectl set-hostname kubeadm-uat-master
+sleep 5
+reboot
+
+*************************************************************  Perform the following steps on each worker node  **************************************************
+
+Disable SELinux 
+setenforce 0
+sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+Configure Kubernetes Repositories on both worker nodes
+vim  /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg  https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+***** Install kubeadm and docker package on both nodes
+
+yum install docker
+yum install kubelet kubeadm kubectl
+systemctl enable docker;systemctl start docker
+kubeadm join --token 4572ec.b71b5142e54811da 1.2.3.4:6443 --discovery-token-ca-cert-hash sha256:c38b3a9a810aa38011d12eeabc2add82dc47e6fb24b4d6b0654eff392971cd4d
+kubectl service is automatically Up 
+systemctl status kubectl
+
+##### Worker node-1 script For Automation
+
+#!/bin/bash
+mkdir /var/logs
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/logs/app-1 /var/logs
+sleep 5
+mkdir /opt/webastra
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/data/app-1 /opt/data/
+sleep 5
+kubeadm join --token 4572ec.b71b5142e54811da 1.2.3.4:6443 --discovery-token-ca-cert-hash sha256:c38b3a9a810aa38011d12eeabc2add82dc47e6fb24b4d6b0654eff392971cd4d
+sleep 60
+hostname=`curl http://169.254.169.254/latest/meta-data/local-hostname`
+ssh root@ec2-35-170-3-169.compute-1.amazonaws.com "kubectl label nodes $hostname Nodeselector=value"
+
+#####Worker node-2 script For Automation 
+
+#!/bin/bash
+mkdir /var/logs
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/logs/haproxy /var/logs
+sleep 5
+mkdir /opt/webastra
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-4a2efe02.efs.us-east-1.amazonaws.com:/webastra/haproxy /opt/webastra
+sleep 5
+kubeadm join --token 8e8bfa.9bc4194f19e4b3cc 35.170.3.169:6443 --discovery-token-ca-cert-hash sha256:c38b3a9a810aa38011d12eeabc2add82dc47e6fb24b4d6b0654eff392971cd4d
+sleep 60
+hostname=`curl http://169.254.169.254/latest/meta-data/local-hostname`
+ssh root@ec2-35-170-3-169.compute-1.amazonaws.com "kubectl label nodes $hostname haproxy=SUPPORT-KIT-haproxy"

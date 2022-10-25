@@ -1,0 +1,1124 @@
+------------------
+Stateful Set
+------------------
+All the instances of a pod are identical and these stateless applications can be easily scaled up and down. 
+
+Each pod is unique and is been assigned with unique identifier that needs to be maintained. This is technique is generally used for more stateful applications.
+
+cassandra-0.cassandra.default.svc.cluster.local
+
+StatefulSet named web has its Pods named web-0, web-1, and web-2. When the web Pod specification is changed, its Pods are gracefully stopped and recreated in an ordered way; in this example, web-2 is terminated first, then web-1, and so on .
+
+podManagementPolicy: Parallel.
+
+------------------
+DaemonSet
+------------------
+A DaemonSet is a set of pods that is run only once on a host. It's used for host-layer features, for instance a network, host monitoring or storage plugin or other things which you would never want to run more than once on a host.
+
+running a cluster storage daemon on every node
+running a logs collection daemon on every node
+running a node monitoring daemon on every node
+
+A Kubernetes volume, on the other hand, the same as the Pod that encloses it. Consequently, a volume outlives any Containers that run within the Pod, 
+and data is preserved across Container restarts. Of course, when a Pod ceases to exist, the volume will cease to exist, too. Perhaps more importantly
+than this, Kubernetes supports many types of volumes, and a Pod can use any number of them simultanehously.
+
+The PersistentVolume subsystem provides an API for users and administrators that abstracts details of how storage is provided from how it is consumed. 
+To do this we introduce two new API resources:PersistentVolume and PersistentVolumeClaim.
+
+A PersistentVolume (PV) is a storage in the cluster that has to be provisioned by an administrator and it is a cluster resource. PVs are volume 
+plugins like Volumes, but have a life cycle independent of any individual pod that uses the PV.
+
+This API object captures the details of the implementation of the storage, be that NFS, iSCSI, or a cloud-provider-specific storage system.
+
+A PersistentVolumeClaim (PVC) is a request for storage by a user. It is similar to a pod. Pods consume node resources and PVCs consume PV resources. 
+Pods can request specific levels of resources (CPU and Memory). Claims can request specific size and access modes 
+
+--------------------
+   Node is tainted
+--------------------
+
+When a node is tainted, the pods don't get scheduled by default, however, if we have to still schedule a pod to a tainted node we can start applying tolerations to the pod spec.
+
+kubectl taint nodes node1 key=value:NoSchedule
+Apply toleration to a pod:
+
+spec:
+tolerations:
+- key: "key"
+operator: "Equal"
+value: "value"
+effect: "NoSchedule"
+
+
+--------------------------------
+       Drain in K8s 
+--------------------------------
+
+When we run the above command it marks the node unschedulable for newer pods then the existing pods are evicted if the API Server supports eviction 
+else it deletes the pods
+
+kubectl drain <nodename>
+
+Once the node is up and running and you want to add it in rotation we can run the below command
+kubectl uncordon <nodename>
+
+------------------------------------
+            Init conatiner 
+------------------------------------
+Preconditions are met .
+
+Each init container must complete successfully before the next one starts.
+
+If a Pod’s init container fails, Kubernetes repeatedly restarts the Pod until the init container succeeds. 
+However, if the Pod has a restartPolicy of Never,Kubernetes does not restart the Pod.
+
+Init containers can contain utilities or custom code for setup that are not present in an app image. 
+
+Once preconditions are met, all of the app containers in a Pod can start in parallel.
+
+---------------------------------------
+Init containers in use
+---------------------------------------
+
+Suppose 
+
+This example defines a simple Pod that has two init containers. The first waits for myservice, and the second waits for mydb. Once both init 
+containers complete, the Pod runs the app container from its spec section.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting 
+	for myservice; sleep 2; done"]
+  - name: init-mydb
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for 
+	mydb; sleep 2; done"]
+	
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox
+    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+  - name: init-mydb
+    image: busybox
+    command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
+
+-----------------------------------
+Differences from regular containers
+---------------------------------------
+
+Init containers support all the fields and features of app containers, including resource limits, volumes, and security settings. However, the 
+resource requests and limits for an init container are handled differently, as documented in Resources.
+
+Also, init containers do not support readiness probes because they must run to completion before the Pod can be ready.
+
+If you specify multiple init containers for a Pod, Kubelet runs each init container sequentially. Each init container must succeed before the next 
+can run. When all of the init containers have run to completion, Kubelet initializes the application containers for the Pod and runs them as usual.
+
+	
+-------------------------------------------------
+    Password update without restart the pod 
+-------------------------------------------------
+
+If you are mounting the secret as a volume into your pod, when the secret is updated the content will be updated in your pod, without the pod restarting. It's up to your application to detect that change and reload, or to write your own logic that rolls the pods if the
+secret changes . volumeMount controls what part of the secret volume is mounted into a particular container.
+
+volumeMounts:
+- readOnly: true
+mountPath: /certs/server
+name: my-new-server-cert
+volumes:
+- name: server-cert
+secret:
+secretName: mysecret
+
+Also, it depends on how the secret is consumed by a container. If env vars, then no. If a volumeMount, then the file is updated in the container
+ready to be consumed by the service but it needs to reload the file. The container does not restart. if the secret is mounted as a volume it 
+is updated dynamically. if it is an environment variable it stays as the old value until the container is restarted .
+
+--------------------
+Liveness Probes
+--------------------
+
+The kubelet uses liveness probes to know when to restart a Container. 
+For example, liveness probes could catch a deadlock, where an application is running, 
+but unable to make progress. Restarting a Container in such a state can help to make the application more available despite bugs.
+
+--------------------------
+Define a liveness command
+--------------------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: liveness
+  name: liveness-exec
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+
+
+------------------------------------------------------------------------------------------------------------    
+The periodSeconds field specifies that the kubelet should perform a liveness probe every 3 seconds. 
+The initialDelaySeconds field tells the kubelet that it should wait 3 seconds before performing the first probe
+    
+To perform a probe, the kubelet executes the command cat /tmp/healthy in the Container. 
+If the command succeeds, it returns 0, and the kubelet considers the Container to be alive and healthy. 
+If the command returns a non-zero value, the kubelet kills the Container and restarts it.
+
+When the Container starts, it executes this command:    
+
+touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+
+
+-------------------------------------
+Define a liveness HTTP request
+-------------------------------------
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    test: liveness
+  name: liveness-http
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    args:
+    - /server
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+        httpHeaders:
+        - name: Custom-Header
+          value: Awesome
+      initialDelaySeconds: 3
+      periodSeconds: 3
+
+To perform a probe, the kubelet sends an HTTP GET request to the server that is running in the Container and listening on port 8080. 
+If the handler for the server’s /healthz path returns a success code, the kubelet considers the Container to be alive and healthy. 
+If the handler returns a failure code, the kubelet kills the Container and restarts it.
+
+Any code greater than or equal to 200 and less than 400 indicates success. Any other code indicates failure.
+
+--------------------------------
+Define a TCP liveness probe
+-------------------------------
+
+A third type of liveness probe uses a TCP Socket. With this configuration, the kubelet will attempt to open a socket to your container on the 
+specified port. 
+If it can establish a connection, the container is considered healthy, if it can’t it is considered a failure.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: goproxy
+  labels:
+    app: goproxy
+spec:
+  containers:
+  - name: goproxy
+    image: k8s.gcr.io/goproxy:0.1
+    ports:
+    - containerPort: 8080
+    readinessProbe:
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 5
+      periodSeconds: 10
+    livenessProbe:
+      tcpSocket:
+        port: 8080
+      initialDelaySeconds: 15
+      periodSeconds: 20
+       
+As you can see, configuration for a TCP check is quite similar to an HTTP check. This example uses both readiness and liveness probes. 
+The kubelet will send the first readiness probe 5 seconds after the container starts. 
+This will attempt to connect to the goproxy container on port 8080. 
+If the probe succeeds, the pod will be marked as ready. The kubelet will continue to run this check every 10 seconds.
+
+In addition to the readiness probe, this configuration includes a liveness probe. The kubelet will run the first liveness probe 15 seconds after the container starts. Just like the readiness probe, this will attempt to connect to the goproxy container on port 8080. If the liveness probe fails, the container will be restarted   
+   
+--------------------
+Readiness Probes
+--------------------
+The kubelet uses readiness probes to know when a Container is ready to start accepting traffic. 
+A Pod is considered ready when all of its Containers are ready. One use of this signal is to control which Pods are used as backends for Services. 
+When a Pod is not ready, it is removed from Service load balancers.
+
+Updating deployments without readiness probes can result in downtime as old pods are replaced by new pods. 
+If the new pods are misconfigured or somehow broken, that downtime extends until you detect the problem and rollback.
+With readiness probes,  Kubernetes will not send traffic to a pod until the probe is successful. 
+
+When updating a deployment, it will also leave old replica(s) running until probes have been successful on new replica. 
+That means that if your new pods are broken in some way, they’ll never see traffic, your old pods will continue to serve all traffic for the\
+deployment.
+
+----------------------------------
+readinessProbe:
+  exec:
+    command:
+    - cat
+    - /tmp/healthy
+  initialDelaySeconds: 5
+  periodSeconds: 5
+------------------------------------
+
+For example, an application might need to load large data or configuration files during startup, or depend on external services after startup. In such cases, you don't want to kill the application, but you don't want to send it requests either. Kubernetes provides readiness probes to detect and mitigate these situations. A pod with containers reporting that they are not ready does not receive traffic through Kubernetes Services.
+
+
+initialDelaySeconds: 
+Number of seconds after the container has started before liveness or readiness probes are initiated.
+
+periodSeconds: 
+How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+
+timeoutSeconds: 
+Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.
+
+successThreshold: 
+Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness. Minimum value is 1.
+
+failureThreshold: 
+When a Pod starts and the probe fails, Kubernetes will try failureThreshold times before giving up. Giving up in case of liveness probe means restarting the Pod. In case of readiness probe the Pod will be marked Unready. Defaults to 3. Minimum value is 1.
+
+HTTP probes have additional fields that can be set on httpGet:
+
+host: 
+Host name to connect to, defaults to the pod IP. You probably want to set “Host” in httpHeaders instead.
+
+scheme: 
+Scheme to use for connecting to the host (HTTP or HTTPS). Defaults to HTTP.
+
+path: 
+Path to access on the HTTP server.
+
+httpHeaders: 
+Custom headers to set in the request. HTTP allows repeated headers.
+
+port: 
+Name or number of the port to access on the container. Number must be in the range 1 to 65535
+
+
+--------------------------------------
+Types of multi-container pod petterns 
+--------------------------------------
+A) sidecar:
+A pod spec which runs the main container and a helper container that does some utility work, but that is not necessarily needed for the main 
+container to work.
+
+Pod has Shared FileSystem  ---> app conatiner ---> Web server write to log files ---> Sends log files to a buckets 
+               
+B) adapter:
+The adapter container will inspect the contents of the app's file, does some kind of restructuring and reformat it, and write the correctly
+formatted output to the location.
+app conatiner ---> write complex monitoring output -->  adapter ---> simplifies monitoring output for services. 
+
+c) ambassador:
+It connects containers with the outside world. It is a proxy that allows other containers to connect to a port on localhost.
+app conatiner ---> Need a database connection  --->  ambassador ---> proxies database connection .
+
+--------------------------------------
+      API Security on Kubernetes 
+--------------------------------------
+
+Use the correct auth mode with API server authorization-mode=Node,RBAC
+Ensure all traffic is protected by TLS
+Use API authentication (smaller cluster may use certificates but larger multi-tenants may want an AD or some OIDC authentication).
+Make kubeless protect its API via authorization-mode=Webhook
+Make sure the kube-dashboard uses a restrictive RBAC role policy
+Monitor RBAC failures
+Remove default ServiceAccount permissions
+Filter egress to Cloud API metadata APIs . 
+Filter out all traffic coming into kube-system namespace except DNS
+A default deny policy on all inbound on all namespaces is good practice. You explicitly allow per deployment.
+Use a podsecurity policy to have container restrictions and protect the Node
+Keep kube at the latest version.
+
+----------------------
+Node and pod Affinity
+----------------------
+Node Affinity
+
+apiVersion: v1
+kind: Pod
+metadata:
+name: with-node-affinity
+spec:
+affinity:
+nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: Kubernetes.io/e2e-az-name
+            operator: In
+            values:
+            - e2e-az1
+
+Pod Affinity
+
+apiVersion: v1
+kind: Pod
+metadata:
+name: with-pod-affinity
+spec:
+  affinity:
+    podAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+          - key: security
+            operator: In
+            values:
+            - S1
+
+Reference: https://Kubernetes.io/docs/concepts/configuration/assign-pod-node/
+
+
+------------------------------------------------------------
+ K8s pod job run will be terminated particular time period 
+------------------------------------------------------------
+
+kind: CronJob
+apiVersion: batch/v1beta1
+metadata:
+  name: mycronjob
+spec:
+  schedule: "*/1 * * * *"
+activeDeadlineSeconds: 200
+  jobTemplate:
+    metadata:
+      name: google-check-job
+    spec:
+      template:
+        metadata:
+          name: mypod
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: mycontainer
+             image: alpine
+             command: ["/bin/sh"]
+             args: ["-c", "ping -w 1 google.com"]
+
+kubectl create -f <test.yaml> --dry-run pod never launch 
+
+
+#####Links Kubernetes 
+kubeadm is your api-server 
+kubectl is your controler 
+kubelet is your communcation use 
+https://kubernetes.io/docs/user-guide/walkthrough/k8s201/#process-health-checking
+https://kubernetes.io/docs/user-guide/walkthrough/k8s201/#health-checking
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
+https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/	
+https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/#24-initializing-your-master
+
+-----------------------------------------
+ Etcd Backup 
+-----------------------------------------
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+name: backup
+namespace: kube-system
+spec:
+# activeDeadlineSeconds: 100
+schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            # Same image as in /etc/kubernetes/manifests/etcd.yaml
+            image: k8s.gcr.io/etcd:3.2.24
+            env:
+            - name: ETCDCTL_API
+              value: "3"
+            command: ["/bin/sh"]
+            args: ["-c", "etcdctl --endpoints=https://127.0.0.1:2379 --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt --key=/etc/kubernetes/pki/etcd/healthcheck-client.key snapshot save /backup/etcd-snapshot-$(date +%Y-%m-%d_%H:%M:%S_%Z).db"]
+            volumeMounts:
+            - mountPath: /etc/kubernetes/pki/etcd
+              name: etcd-certs
+              readOnly: true
+            - mountPath: /backup
+              name: backup
+          restartPolicy: OnFailure
+          hostNetwork: true
+          volumes:
+          - name: etcd-certs
+            hostPath:
+              path: /etc/kubernetes/pki/etcd
+              type: DirectoryOrCreate
+          - name: backup
+            hostPath:
+              path: /data/backup
+              type: DirectoryOrCreate
+
+Restore Strategy for Internal Etcd Cluster:
+
+docker run --rm \
+-v '/data/backup:/backup' \
+-v '/var/lib/etcd:/var/lib/etcd' \
+--env ETCDCTL_API=3 \
+'k8s.gcr.io/etcd:3.2.24' \
+/bin/sh -c "etcdctl snapshot restore '/backup/etcd-snapshot-2018-12-09_11:12:05_UTC.db' ; mv /default.etcd/member/ /var/lib/etcd/"
+kubeadm init --ignore-preflight-errors=DirAvailable--var-lib-etcd
+				
+-----------------------
+           DNS
+-----------------------
+The kube-dns service prior to Kubernetes 1.11 is made up of three containers running in a kube-dns pod in the kube-system namespace. The three 
+containers are:
+
+kube-dns: a container that runs SkyDNS, which performs DNS query resolution
+dnsmasq: a popular lightweight DNS resolver and cache that caches the responses from SkyDNS
+sidecar: a sidecar container that handles metrics reporting and responds to health checks for the service
+
+CoreDNS is a single process, written in Go, that covers all of the functionality of the previous system. A single container resolves and caches
+DNS queries,  responds to health checks, and provides metrics.
+
+CoreDNS fixes some other minor bugs and adds some new features:-
+
+Some issues with incompatibilities between using stubDomains and external services have been fixed
+CoreDNS can enhance DNS-based round-robin load balancing by randomizing the order in which it returns certain records
+A feature called autopath can improve DNS response times when resolving external hostnames, by being smarter about iterating through each of the 
+search domain suffixes listed in resolv.conf
+With kube-dns 10.32.0.125.namespace.pod.cluster.local would always resolve to 10.32.0.125, even if the pod doesn’t actually exist. CoreDNS has a
+ “pods verified” mode that will only resolve successfully if a pod exists with the right IP and in the right namespace.
+
+10.32.0.125.namespace.pod.cluster.local 
+ 
+------------------------------------------------------------
+Can we use many claims out of  persistentVolume 
+------------------------------------------------------------
+
+A PersistentVolume (PV) is a piece of storage in the cluster that has been provisioned by an administrator or dynamically provisioned using Storage Classes.
+
+A PersistentVolumeClaim (PVC) is a request for storage by a user. It is similar to a Pod. Pods consume node resources and PVCs consume PV resources.
+
+The mapping between persistentVolume and persistentVolumeClaim is always one to one. Even When you delete the claim, PersistentVolume still 
+remains as we set persistentVolumeReclaimPolicy is set to Retain and It will not be reused by any other claims.
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: mypv
+spec:
+capacity:
+storage: 5Gi
+volumeMode: Filesystem
+accessModes:
+- ReadWriteOnce
+persistentVolumeReclaimPolicy: Retain
+
+Persistent Volume Claim for StatefulSet
+
+Sometimes, we need the configuration to persist so that when the pod restarts the same configuration can be applied. We typically request a
+Persistent Volume Claim (PVC) through the storage provider to create the Persistent Volume (PV), and we can mount it to the pod container.
+
+--------------------------------------------
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-persistent-cfg
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Mi
+  #storageClassName: yourClass
+
+---------------------------------------------
+
+Once you have the PVC defined, you can apply it in your deployment.
+
+ volumes:
+        - name: pv-data
+          persistentVolumeClaim:
+            claimName: pvc-persistent-cfg
+
+----------------------------------------------
+
+--------------------
+Potential Problem
+--------------------
+
+The above K8s deployment works fine if we have only one single replica. However, if there were multiple replicas running, you will encounter problems.
+First, the ReadWriteOnce won’t allow you to mount the same PV to a different node. See the following quote from Kubernetes document.
+
+ReadWriteOnce — the volume can be mounted as read-write by a single node
+ReadOnlyMany — the volume can be mounted read-only by many nodes
+ReadWriteMany — the volume can be mounted as read-write by many nodes
+
+Secondly, even you use ReadWriteMany to allow it to be able to run across multiple nodes and your underlining storage class support it, your 
+application must be able to handle the concurrent read-write of the same file. You don’t want your developers to handle the deployment related 
+requirement.
+
+---------------------
+PV in StatefulSet
+---------------------
+
+To allow the application to be able to scale horizontally, we have to change the type of workload from Deployment to StatefulSet to make the stateful app work.
+Specifically to the volume part, StatefulSet provides a key named as volumeClaimTemplates . With that, you can request the PVC from the storage class dynamically. As part of your new statefulset app definition, replace the volumes with
+
+Once the new yaml file is applied, assuming you have 3 replica, you will see the pods are created one by one sequentially, and the PVC is requested 
+during the pod creation.
+
+-------------------------------------------
+What Is Service Account in Kubernetes?
+-------------------------------------------
+User Account: It is used to allow us, humans, to access the given Kubernetes cluster. Any user needs to get authenticated by the API server to do so. A user account can be an admin or a developer who is trying to access the cluster level resource
+
+Service Account: It is used to authenticate machine level processes to get access to our Kubernetes cluster. The API server is responsible for such authentication to the processes running in the pod
+
+Any processes or applications in the container which resides within the pod can access the cluster by getting authenticated by the API server, using a service account.
+
+When you create a pod, if you do not specify a service account, it is automatically assigned the default service account in the same namespace.
+
+-----------------------
+ Efs Mount Multimaster 
+-----------------------
+
+#config efs -
+cd /mnt
+mkdir -p kubeadm/etcd
+mkdir webastra
+
+#EFS-Mount
+mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 fs-7b320732.efs.us-east-1.amazonaws.com:/kubeadm/etcd /var/lib/etcd
+
+# Entry in /etc/fstab
+
+fs-7b320732.efs.us-east-1.amazonaws.com:/kubeadm/etcd /var/lib/etcd nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev 0 0
+
+-----------------------
+Certifacte expire 
+-----------------------
+mv /etc/kubernetes/pki/apiserver.key /etc/kubernetes/pki/apiserver.key.old
+mv /etc/kubernetes/pki/apiserver.crt /etc/kubernetes/pki/apiserver.crt.old
+mv /etc/kubernetes/pki/apiserver-kubelet-client.crt /etc/kubernetes/pki/apiserver-kubelet-client.crt.old
+mv /etc/kubernetes/pki/apiserver-kubelet-client.key /etc/kubernetes/pki/apiserver-kubelet-client.key.old
+mv /etc/kubernetes/pki/front-proxy-client.crt /etc/kubernetes/pki/front-proxy-client.crt.old
+mv /etc/kubernetes/pki/front-proxy-client.key /etc/kubernetes/pki/front-proxy-client.key.old
+
+kubeadm alpha phase certs apiserver --apiserver-advertise-address 54.86.126.86
+kubeadm alpha phase certs apiserver-kubelet-client
+kubeadm alpha phase certs front-proxy-client
+
+mv /etc/kubernetes/admin.conf /etc/kubernetes/admin.conf.old
+mv /etc/kubernetes/kubelet.conf /etc/kubernetes/kubelet.conf.old
+mv /etc/kubernetes/controller-manager.conf /etc/kubernetes/controller-manager.conf.old
+mv /etc/kubernetes/scheduler.conf /etc/kubernetes/scheduler.conf.old
+
+kubeadm alpha phase kubeconfig all --apiserver-advertise-address 54.86.126.86
+
+nano .kube/config   on controller    and on master Vim .kube/config 
+
+on both side and copy data key 3 parameters 
+
+sudo mv .kube/config .kube/config.old
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+
+kubeadm join --token f56a16.b4228f2afaed1650 54.86.126.86:6443 --discovery-token-ca-cert-hash sha256:0ed7272dc19f1bc8f003b29d891f6ebb0dd243ef5ca9b443d2969b5913942bd8
+
+kubeadm init --pod-network-cidr=10.244.0.0/16 --token-ttl 0 --apiserver-advertise-address=54.86.126.86
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/v0.9.1/Documentation/kube-flannel.yml
+
+Note the join command after installing 
+
+---------------------------
+Certifacte Resource expire 
+---------------------------
+
+Kubernetes starts with three initial namespaces:
+default : The default namespace for objects with no other namespace
+kube-system : The namespace for objects created by the Kubernetes system
+kube-public : This namespace is created automatically and is readable by all users (including those not authenticated). This namespace is 
+mostly reserved for cluster usage, in case that some resources should be visible and readable publicly throughout the whole cluster. The public 
+aspect of this namespace is only a convention, not a requirement.
+
+Setting the namespace for a request name space is define by resource based and named base 
+namespace: myspace 
+spec : 
+ hard:
+ request.cpu:"1"
+ request.memory:1Gi
+ limit.cpu:"2"
+ limit.memory:2Gi
+ 
+objects  define 
+
+If we create name sapce so deployment is using that particluer name space so we launch the pod by using existing name space .
+
+Deploy Kubernetes In Five Different Ways:-
+1. Deploy Kuberenetes with Minikube for laptop environments
+2. kubeadm for on-premises deployments
+3. Kubernetes hosted infrastructure with Google Cloud and Microsoft Azure
+4. Kube2Go for a small testbed
+5. Platform9 Managed Kubernetes (PMK) for a SaaS-Managed, hybrid solution
+
+-----------------------
+ Other Commands 
+-----------------------
+kubectl expose deployment tut-deployment --type=NodePort --port=80
+service "tut-deployment" exposed
+kubectl describe service tut-deployment
+ip link delete cni0
+ip link delete flannel.1
+
+
+-------------------------------------
+Different Strategies for Deployment 
+-------------------------------------
+
+
+Recreate:    Version A is terminated then version B is rolled out.
+Rolling-update:rolling-update or incremental --> Version B is slowly rolled out and replacing version A.
+Blue/Green:  Version B is released alongside version A, then the traffic is switched to version B.
+Canary:      Version B is released to a subset of users, then proceed to a full rollout.
+A/B testing: Version B is released to a subset of users under specific condition.
+Shadow:      Version B receives real-world traffic alongside version A and doesn’t impact the response.
+
+
+-------------------------------------
+        Recreate
+-------------------------------------
+
+Recreate: terminate the old version and release the new one
+The recreate strategy is a dummy deployment which consists of shutting down version A then deploying version B after version A is turned off. 
+This technique implies downtime of the service that depends on both shutdown and boot duration of the application.
+
+1. version 1 is service traffic
+2. delete version 
+3. deploy version 
+4. wait until all replicas are ready
+5. Version A is terminated them Version B is rolled out . 
+
+## Yaml 
+kind: Deployment
+spec:
+replicas: 3
+strategy:
+type: Recreate
+
+Pros:
+Easy to setup.
+Application state entirely renewed.
+
+Cons:
+High impact on the user, expect downtime that depends on both shutdown and boot duration of the application.
+
+-------------------------------------
+      Rolling-update deployment
+-------------------------------------
+
+The ramped deployment strategy consists of slowly rolling out a version of an application by replacing instances one after the other until 
+all the instances are rolled out. It usually follows the following process: with a pool of version A behind a load balancer, one instance of 
+version B is deployed. When the service is ready to accept traffic, the instance is added to the pool. Then, one instance of version A is 
+removed from the pool and shut down.
+Parallelism, max batch size: Number of concurrent instances to roll out.
+Max surge: How many instances to add in addition of the current amount.
+Max unavailable: Number of unavailable instances during the rolling update procedure.
+
+1. version 1 is serving traffic
+2. deploy version 2
+3. wait until all replicas are replaced with version 2
+
+Pros:
+Easy to set up.
+Version is slowly released across instances.
+Convenient for stateful applications that can handle rebalancing of the data.
+
+Cons:
+Rollout/rollback can take time.
+Supporting multiple APIs is hard.
+No control over traffic.
+
+## Yaml
+kind: Deployment
+spec:
+replicas: 3
+strategy:
+type: RollingUpdate
+rollingUpdate:
+maxSurge: 2 # how many pods we can add at a time
+maxUnavailable: 0 # maxUnavailable define how many pods can be unavailable during the rolling update
+
+-------------------------------------
+         Blue/green deployment
+-------------------------------------
+The blue/green deployment strategy differs from a ramped deployment, version B (green) is deployed alongside version A (blue) with exactly 
+the same amount of instances. After testing that the new version meets all the requirements the traffic is switched from version A to version 
+B at the load balancer level.
+
+Deploy new version of both services
+Wait for all services to be ready
+Switch incoming traffic from version 1 to version 2
+Shutdown version 1
+
+Pros:
+Instant rollout/rollback.
+Avoid versioning issue, the entire application state is changed in one go.
+
+Cons:
+Expensive as it requires double the resources.
+Proper test of the entire platform should be done before releasing to production.
+Handling stateful applications can be hard.
+
+## Yaml
+# Note here that we match both the app and the version.
+# When switching traffic, we update the label “version” with
+# the appropriate value, ie: v2.0.0
+ selector:
+   app: my-app
+   version: v1.0.0
+  
+-------------------------------------
+             Canary   
+-------------------------------------
+A canary deployment consists of gradually shifting production traffic from version A to version B. Usually the traffic is split based on weight. 
+For example, 90 percent of the requests go to version A, 10 percent go to version B.
+This technique is mostly used when the tests are lacking or not reliable or if there is little confidence about the stability 
+of the new release on the platform.
+
+Truncated deployment manifest version A:
+spec:
+  replicas: 3
+Truncated deployment manifest version B, 
+spec:
+  replicas: 1
+  
+Pros:
+Version released for a subset of users.
+Convenient for error rate and performance monitoring.
+Fast rollback
+
+Con:
+Slow rollout.
+  
+Steps to follow :-
+10 replicas of version 1 is serving traffic
+deploy 1 replicas version 2 (meaning ~10% of traffic)
+wait enought time to confirm that version 2 is stable and not throwing unexpected errors
+scale up version 2 replicas to 10
+wait until all instances are ready
+shutdown version 1
+
+we adjust the number of replicas managed by a ReplicaSet to distribute the traffic amongst the versions.
+If you are not confident about the impact that the release of a new feature might have on the stability of the platform, a canary release
+strategy is suggested.
+
+-------------------------------------
+             A/B testing
+-------------------------------------
+
+A/B testing deployments consists of routing a subset of users to a new functionality under specific conditions. 
+It is usually a technique for making business decisions based on statistics, rather than a deployment strategy. 
+However, it is related and can be implemented by adding extra functionality to a canary deployment so we will briefly discuss it here.
+This technique is widely used to test conversion of a given feature and only roll-out the version that converts the most.
+
+Here is a list of conditions that can be used to distribute traffic amongst the versions:-
+By browser cookie
+Query parameters
+Geolocalisation
+Technology support: browser version, screen size, operating system, etc.
+Language
+
+Pros:
+Several versions run in parallel.
+Full control over the traffic distribution.
+Cons:
+Requires intelligent load balancer.
+Hard to troubleshoot errors for a given session, distributed tracing becomes mandatory.
+
+## Yaml
+
+route:
+- tags:
+  version: v1.0.0
+  weight: 90
+- tags:
+  version: v2.0.0
+  weight: 10
+
+Shadow
+A shadow deployment consists of releasing version B alongside version A, fork version A’s incoming requests and send them to version B 
+as well without impacting production traffic. This is particularly useful to test production load on a new feature. A rollout of the 
+application is triggered when stability and performance meet the requirements.
+
+This technique is fairly complex to setup and needs special requirements, especially with egress traffic. For example, given a shopping 
+cart platform, if you want to shadow test the payment service you can end-up having customers paying twice for their order. In this case, 
+you can solve it by creating a mocking service that replicates the response from the provider.
+
+Pros:
+
+Performance testing of the application with production traffic.
+No impact on the user.
+No rollout until the stability and performance of the application meet the requirements.
+Cons:
+
+Expensive as it requires double the resources.
+Not a true user test and can be misleading.
+Complex to setup.
+Requires mocking service for certain cases.
+
+-------------------------------------
+          Conclusion
+-------------------------------------
+
+There are multiple ways to deploy a new version of an application and it really depends on the needs and budget. 
+When releasing to development/staging environments, a recreate or ramped deployment is usually a good choice. 
+When it comes to production, a ramped or blue/green deployment is usually a good fit, but proper testing of the new platform is necessary.
+
+Blue/green and shadow strategies have more impact on the budget as it requires double resource capacity. 
+If the application lacks in tests or if there is little confidence about the impact/stability of the software, 
+then a canary, a/ b testing or shadow release can be used. If your business requires testing of a new feature amongst 
+a specific pool of users that can be filtered depending on some parameters like geolocation, language, operating system 
+or browser features, then you may want to use the a/b testing technique.
+
+Last but not least, a shadow release is complex and requires extra work to mock egress traffic which is mandatory when 
+calling external dependencies with mutable actions (email, bank, etc.). However, this technique can be useful when 
+migrating to a new database technology and use shadow traffic to monitor system performance under load.
+
+--------------------------
+        Rollout Deployment 
+--------------------------
+
+ kubectl rollout history deployment <deployment>  ---> display all the prior Deployments (revision history )
+ kubectl rollout undo deployment <deployment>     ---> last Deployment can be restored with the command, 
+
+The Deployment updates Pods in a rolling update fashion when .spec.strategy.type==RollingUpdate .You can specify maxUnavailable and maxSurge to 
+control the rolling update process. Rolling update is the default deployment strategy.kubectl rolling-update updates Pods and 
+ReplicationControllers in a similar fashion. But, Deployments are recommended, since they are declarative, and have additional features, 
+such as rolling back to any previous revision even after the rolling update is done.So for rolling updates to work as one may expect, a 
+readiness probe is essential. Redeploying deployments is easy but rolling updates will do it nicely for me without any downtime. The way 
+to make a  rolling update of a Deployment and kubctl apply on it is as below
+
+########  Kubernetes best tools 
+Heapster: Installed as a pod inside of Kubernetes, it gathers data and events from the containers and pods within the cluster.
+Prometheus: Open source Cloud Native Computing Foundation (CNCF) project that offers powerful querying capabilities, visualization and alerting.
+Grafana:  Used in conjunction with Heapster for visualizing data within your Kubernetes environment.
+InfluxDB: A highly-available database platform that stores the data captured by all the Heapster pods.
+CAdvisor:  focuses on container level performance and resource usage. This comes embedded directly into kubelet and should automatically discover active containers.
+
+################# Kubernates Deployment Explaination 
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: haproxy-deployment        ---->  deployment name   
+  name: haproxy-deployment
+  namespace: default
+  selfLink: /apis/extensions/v1beta1/namespaces/default/deploy]\78ments/deployment
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      run: haproxy-deployment
+  strategy:
+    rollingUpdate:                     ------> Where maxSurge determines how many new Pods to create, maxUnavailable determines how many old Pods to kill.
+	In this case, we can only kill 1 old Pod at a time. This ensures the capacity is always at least 2 - 1 Pods.
+      maxSurge: 1
+      maxUnavailable: 1                ------> one pod create and old pod delete .
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        run: haproxy-deployment
+    spec:
+      hostNetwork: true
+      containers:
+      - image: i3clogic/haproxy:6.3
+        imagePullPolicy: Always
+        name: haproxy-deployment
+        ports:
+        - containerPort: 80                             this port is runing inside the container 
+          hostPort: 80                                  this port is communicate from conatiner port 
+        volumeMounts:                                   this path is available inside the container 
+        - name: resolver
+          mountPath: /etc/resolv.conf
+
+        - name: logs-volume
+          mountPath: /var/log/haproxy
+        - name: haproxy-config
+          mountPath: /etc/haproxy/haproxy.cfg
+
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always        ---->  The default value is Always. restartPolicy applies to all Containers in the Pod. restartPolicy only refers to 
+	  restarts of the Containers by the kubelet on the same node. Failed Containers that are restarted by the kubelet are restarted with an exponential
+	  back-off delay (10s, 20s, 40s
+                                            Always: Restart Container; Pod phase stays Running.
+      securityContext: {}
+      terminationGracePeriodSeconds: 30    First create the deployment then delete, the pod does not wait 30 seconds before deleted.
+                                           terminationGracePeriodSeconds: 10: this is the time kubernetes will wait before sending SIGKILL to forcefully terminate the container if it did not stopped by itself.
+            volumes:
+      - name: logs-volume                  this path are available in host machine 
+        hostPath:
+          path: /var/logs/haproxy/logs
+      - name: resolver
+        hostPath:
+          path: /etc/resolv.conf
+          type: File
+      - name: haproxy-config
+        hostPath:
+          path: /opt/webastra/uat-haproxy.cfg
+      nodeSelector:
+        haproxy: Gateway_UAT-haproxy                                deployment create and es server per deploy ho isliya hum node selector k use karta hai 
+                                                                    service ip multiple instance communicate kar te hai
+    minReadySeconds:
+        the bootup time of your application, Kubernetes waits specific time til the next pod creation.
+        Kubernetes assume that your application is available once the pod created by default.
+        If you leave this field empty, the service may be unavailable after the update process cause all the application pods are not ready yet
+    maxSurge:
+        amount of pods more than the desired number of Pods
+        this fields can be an absolute number or the percentage
+        ex. maxSurge: 1 means that there will be at most 4 pods during the update process if replicas is 3
+    maxUnavailable:
+        amount of pods that can be unavailable during the update process
+        this fields can be a absolute number or the percentage
+        this fields cannot be 0 if maxSurge is set to 0
+        ex. maxUnavailable: 1 means that there will be at most 1 pod unavailable during the update process
+        
+
+#######service.yaml 
+kind: Service
+apiVersion: v1
+metadata:
+  name: msapi-service
+  namespace: default
+spec:
+  selector:
+    run: msapi-deployment
+  ports:
+  - protocol: TCP
+    port: 8050
+    targetPort: 8080
+
+
+----------------------------------
+Azure kubenet
+----------------------------------
+
+kubenet, nodes get an IP address from the Azure virtual network subnet. Pods receive an IP address from a logically different address space to the Azure virtual network subnet of the nodes.
+
+Kubenet means that containers get an IP address from a NATted IP address.
+
+Pods can't communicate directly with each other.
+
+kubenet - a simple /24 IP address range can support up to 251 nodes in the cluster and 110 pods per node with kubenet.
+
+There also a limitation to 400 nodes per cluster. 
+
+Don't create more than one AKS cluster in the same subnet.
+
+Limitations  : 
+Route tables and user-defined routes are required for using kubenet, which adds complexity to operations.
+
+Azure network policies, but Calico network policies are supported on kubenet
+
+Windows node pools is  not supported .
+
+Virtual nodes add-on  is not supported. 
+
+Azure CNI 
+Azure Container Networking Interface (CNI), every pod gets an IP address from the subnet and can be accessed directly.
+
+Can directly communicate with other pods and services. 
+
+IP addresses are consumed by the AKS nodes based on the maximum number of pods that they can support
+
+Azure CNI - that same basic /24 subnet range could only support a maximum of 8 nodes in the cluster and maximum of 30 pods per node with Azure CNI.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,682 @@
+------------------------------------------------
+                 Kuberntes Document 
+------------------------------------------------
+
+Kubernetes is an open source orchestration system for Docker containers. It manages containerized applications across 
+multiple hosts and provides basic  mechanisms for deployment, maintenance, and scaling of applications. Kubernetes is 
+an open-source container management tool which holds the responsibilities of container deployment, scaling & descaling 
+of containers & load balancing.
+
+1. Kubernetes is the container that provides a good way to run and bundle your applications
+
+2. Suppose we you have 5-6 microservices for a single application performing various tasks, and all these microservices are 
+put inside containers. Now, to make sure that these containers communicate with each other we need container orchestration.
+
+3. Kubernetes is a container orchestration tool that is used for automating the tasks of managing, monitoring, scaling, and 
+deploying containerized applications. It creates groups of containers that can be logically discovered and managed for easy 
+operations on containers.
+
+kubeadm is your api-server.
+kubectl is your controller.
+kubelet is your communication use.
+
+---------------------
+Features Kubernetes 
+--------------------
+
+Automatic scheduling
+Automated rollbacks and rollouts
+Horizontal scaling
+Auto-healing capabilities
+self-healing
+Configuration management
+Load balancing and service discovery 
+Highly scalable and scales fast
+Kubernetes can do auto-scaling
+Manual intervention needed for load balancing traffic between different containers and pods.
+Can deploy rolling updates and does automatic rollbacks.
+Can share storage volumes only with the other containers in the same pod.
+
+
+-------------------------------------
+Components of Kubernetes Architecture 
+--------------------------------------
+
+Master Node(s): This machine is the controller from which you can deploy Kubernetes pods. 
+Pods: are a set of containers that can be deployed across multiple nodes .
+Worker Nodes: These machines provide an environment where Kubernetes can run.
+etcd: This is a key-value store used for configuration data and master state information .
+Scheduler: This service selects appropriate nodes for unscheduled pods
+API Server: This service provides RESTful Kubernetes API used to update the etcd database. It validates incoming requests before updating etcd.
+Controller Manager: This service takes care of all other services – discovering and managing of nodes, monitoring pods, etc.
+Kubelet: This service manages pods on the node based on directions from the API Server on the master.
+
+The master node has the kube-controller-manager, kube-apiserver, kube-scheduler, etcd. Whereas the worker node has kubelet and kube-proxy running 
+on each node.]
+Master Node 
+kube-controller-manager  <-------> kube-apiserver <------> kube-scheduler
+                                   ^
+		                               |
+								                   |
+		                              etcd
+Worker Node 
+kube-apiserver   <-------------> kubelet and kube-proxy 
+
+--------------------------------------
+         kube-apiserver
+--------------------------------------
+Kube-apiserver process runs on Kubernetes master node .
+
+The kube – apiserver follows the scale-out architecture and the front-end of the master node control panel.
+
+kube-apiserver process validates and configures data for the api objects.
+
+This exposes all the APIs of the Kubernetes Master node components and is responsible for establishing communication between Kubernetes Node and the Kubernetes master components.
+
+Its a server that provides an HTTPs or HTTPS-based RESTful API that is allowed to have direct access to the Kubernetes cluster .
+
+Its a connector between all the kubernetes components and mediates all interactions between clients and the API objects stored  in etcd.
+
+--------------------------------------
+          kube-scheduler ==>  distribution and management of workload
+--------------------------------------
+
+The kube-scheduler is responsible for distribution and management of workload on the worker nodes.
+
+The kube-scheduler get the information for hardware configuartion from deployment file and schedules the pods on nodes accordingly .
+
+The kube-scheduler is selects the most suitable node to run the unscheduled pod based on resource requirement and track of resource utilization. 
+
+kube-scheduler is responsible for assigning a node to newly created pods.
+
+It is a simple algorithm that defines the priority to dispatch and is responsible for scheduling pods into nodes .
+
+Node affinity provide a simple way to guarantee that a Pod lands on a particular node .
+
+Predicates is a concept that helps in making correct resource requirements for the pods .
+
+--------------------------------------
+   Kubernetes controller manager
+--------------------------------------
+Runs conroller responsible to act when nodes becomes un available to ensure pod counts as a expected to create endpoints, services and api access token .
+
+The control loops needed to implement the functionality like replica sets and deployments are run by manager
+
+Creates and updates the Kubernetes internal information
+
+Changes the current status to the desired status .
+
+Controller Manager is a daemon that embeds controllers and does namespace creation and garbage collection. 
+It owns the responsibility and communicates with the API server to manage the end-points which are already full.
+
+The different types of controller manager running on the master node are : 
+
+Node Controller --> Manages the status of node like create ,update , delete .
+Replication Controller --> Mainatins the number of pods for every replication objects. 
+Endpoint Controller --> Take care of endpoint objects like pods and services .
+Token Controller and service account --> create defaults account and Api access tokens for new namespaces .
+
+Note : Logically each controller is a separate process but to reduce complexity they are all compiled into a single binary and run in a 
+single process .
+
+--------------------------------------
+     Replication Controller
+--------------------------------------
+
+Update or delete multiple pods with a single command.
+
+A Replication Controller is a structure that enables you to easily create multiple pods, then make sure that number of pods always exists. 
+
+If a pod does crash, the Replication Controller replaces it.
+
+Replication Controllers also provide other benefits, such as the ability to scale the number of pods, and to update or delete multiple pods with a single command.
+
+Replica Set and Replication Controller do almost the same thing. Both of them ensure that a specified number of pod replicas are running at any given time. 
+
+The difference comes with the usage of selectors to replicate pods:-
+
+Replica Set use Set-Based selectors while replication controllers use Equity-Based selectors.
+
+Equity-Based Selectors: This type of selector allows filtering by label key and values
+app=ngnix 
+
+It is responsible to control and administer the lifecycle of the pod.
+It is responsible to monitor and verify whether the allowed number of pod replicas were running
+It helps the user to check the running status of the pod
+Replication controller lets the user to alter a particular pod. The user can drag its position to the top or to the bottom.
+
+
+--------------------------------------
+         Replica set 
+--------------------------------------
+
+It is based on Selector-Based Selectors like app=ngnix, prod,coe
+Replica set use matchExpressions and Replication Controller label use.
+Replica set use  multiple condition use during matchExpressions : 
+matchExpressions:
+      - {key: app, operator: In, values: [soaktestrs, soaktestrs, soaktest]}
+      - {key: teir, operator: NotIn, values: [production]}
+The app label must be soaktestrc, soaktestrs, or soaktest
+The tier label (if it exists) must not be production
+
+Scaling in kubernetes can be done using the replication controller.
+The Replication controller will ensure a specified number of pod replicas will run at all time.
+A pod created with the replica conroller will automatically be replaced if they fail get deleted or are terminated .
+Using the replica conroller is also recommended if you just want to make sure i pod is always running even after reboots.
+you can the run a replication controller with run i replia.
+The make sure that the pod is always runing
+
+------------------------
+   Node In Kubernetes
+------------------------
+Kubectl, Kubelet, and Node Controller components interacts with Kubernetes node interface.
+A node is a worker machine in Kubernetes, previously known as a minion. 
+The services on a node include Docker, kubelet and kube-proxy.
+ 
+------------------------
+       Kubelet
+------------------------
+The kubelet is the primary “node agent” that runs on each node. It can register the node with the apiserver using one of: the hostname. 
+This is an agent service which runs on each node and enables the slave to communicate with the master.
+Kubelet works on the description of containers provided to it in the PodSpec and makes sure that the containers described in the PodSpec are healthy and running.
+
+------------------------
+       Kubectl
+------------------------   
+Kubectl is the platform using which you can pass commands to the cluster. It basically provides the CLI to run commands against the Kubernetes cluster with various ways to create and manage the Kubernetes component.
+
+------------------------
+      Kube Proxy
+------------------------
+Kube-proxy can run on each and every node.
+
+It is used simple TCP/UDP packet forwarding across backend network service. 
+
+Basically, it is a network proxy which reflects the services as configured in Kubernetes API on each node. So, the Docker-linkable compatible environment variables provide the cluster IPs and ports which are opened by proxy.
+
+It makes the Kubernetes services locally and can do TCP and UDP forwarding.
+
+The kube-proxy programs the network on its node, so that network requests to the virtual IP address of a service, are in-fact routed to the endpoints which implement this service .
+
+It finds cluster IPs via environment variables or DNS.
+
+Routes traffic from Pods on the machine to Pods, anywhere in the cluster .
+
+---------------------------
+  Cluster Data Is Stored
+---------------------------
+
+Etcd is written in Go programming language and is a distributed key-value store . 
+
+Etcd stores the configuration data of the Kubernetes cluster, representing the state of the cluster at any given point in time.
+
+Etcd is responsible for storing Kubernetes cluster data.
+
+----------------------------------
+Container Networking Interface
+----------------------------------
+
+AWS, Amazon maintains a container networking plugin for Kubernetes that allows Node to Node networking to operate within an Amazon VPC environment using a Container Networking Interface (CNI) plugin.
+
+The Container Networking Interface (CNI) provides a common API for connecting containers to the outside network.
+
+-----------------------------
+Why should I used Kubernetes 
+-----------------------------
+
+Service Discovery and load balancing ==>Kubernetes has a feature which assigns the containers with their own IP addresses and a unique DNS name, which can used to balance the load on them.
+
+Planning ==> Placement of the containers on the node is a crucial feature on which makes the decision based on the resources it requires and other 
+restrictions.
+
+Auto Scaling ==> Based on the CPU usage, vertical scaling of applications is automatically triggered using the command line.
+
+Self Repair ==>  This is an unique feature in the Kubernetes which will restart the container automatically when it fails. If the Node dies, 
+then containers are replaced or re-planned on the other Nodes. You can stop the containers, if they don't respond for the health checks.
+
+Storage Orchestration ==> This feature of Kubernetes enables the user to mount the network storage system as a local file system.
+
+Batch execution ==>  Kubernetes manages both batch and CI workloads along with replacing containers that fail.
+
+Deployments and Automatic Rollbacks ==> During the configuration changes for the application hosted on the Kubernetes, progressively monitors the
+health to ensure that it does not terminate all the instances at once, it makes an automatic rollback only in the case of failure.
+
+Configuration Management and Secrets ==>  All classifies information like keys and passwords are stored under module called Secrets in Kubernetes. 
+These Secrets are used specially while configuring the application without having to reconstruct the image.
+
+-------------------------------------
+Kubernetes Service 
+-------------------------------------
+Pods are very dynamic , they come and go on the kubernetes cluster.
+That's why pods should never be accessed but always through a services.
+A service is the logical bridge b/w the "mortal"  pod and other service or end users.
+When using the " kubectl expose" command earlier you cretaed a new service for your pod so it could be accessed externally.
+Create a service will create an endpoint for the pod.
+Cluster ip : a virtual ip address only reachable from with in the cluster .
+a node : a part that is the same on each node that is also reachable externally.
+By default service can only run b/w port 30000-32767 but could change the behavior by adding the --service-node-port-range=argumnet to the kube-apiserver.
+
+ClusterIP. Exposes a service which is only accessible from within the cluster.
+NodePort. Exposes a service via a static port on each node’s IP.
+LoadBalancer. Exposes the service via the cloud provider’s load balancer.
+ExternalName. Maps a service to a predefined externalName field by returning a value for the CNAME record.
+
+-------------------
+Headless Service
+-------------------
+Headless Service is similar to that of a ‘Normal’ services but does not have a Cluster IP. 
+
+This service enables you to directly reach the pods without the need of accessing it through a proxy.
+
+A headless service is a service with a service IP but instead of load-balancing it will return the IPs of our associated Pods. 
+
+This allows us to interact directly with the Pods instead of a proxy. 
+
+It's as simple as specifying None for .spec.clusterIP and can be utilized with or without selectors.
+
+Each connection to the service is forwarded to one randomly selected backing pod. But what if the client needs to connect to all of those pods?
+What if the backing pods themselves need to each connect to all the other backing pods. Connecting through the service clearly isn’t the way to do 
+this. What is?
+
+For a client to connect to all pods, it needs to figure out the the IP of each individual pod. One option is to have the client call the Kubernetes 
+API server and get the list of pods and their IP addresses through an API call, but because you should always strive to keep your apps 
+Kubernetes-agnostic, using the API server isn’t ideal
+
+Simply put, a Headless service is the same as default ClusterIP service, but lacks load balancing or proxying. Allowing you to connect to a
+Pod directly.
+
+------------------------
+Security  Kubernetes
+------------------------
+
+1. Apply security updates to env regularly .
+2. Resrrict access to etcd .
+3. Implemenet network segmentation .
+4. Defines strict policy and rules for resources .
+5. Defines resource quota.
+6. Use images from authorized repository only.
+7. Provides Limited direct access to K8s nodes .
+8. Implemenet Vulnerability Scanning .
+
+----------------------
+K8s configmap 
+----------------------
+
+It is an important part of creating a Twelve-Factor Application.
+
+ConfigMaps bind configuration files, command-line arguments, environment variables, port numbers, and other configuration 
+artifacts to your Pods' containers and system components at runtime.
+
+ConfigMaps allow you to separate your configurations from your Pods and components, which helps keep your workloads portable, makes their configurations easier to change and manage, and prevents hardcoding configuration data to Pod specifications
+
+ConfigMaps are useful for storing and sharing non-sensitive, unencrypted configuration information. To use sensitive information in your clusters
+
+You can use kubectl create configmap to create a ConfigMap from multiple files in the same directory.
+
+A ConfigMap is a dictionary of configuration settings. This dictionary consists of key-value pairs of strings. 
+Kubernetes provides these values to your containers.
+
+Use a ConfigMap to keep your application code separate from your configuration.
+
+This lets you change easily configuration depending on the environment (development, production, testing) and to dynamically change 
+configuration at runtime.
+A ConfigMap stores configuration settings for your code. Store connection strings, public credentials, hostnames, and URLs in your ConfigMap.
+
+ConfigMap Working process :- 
+First, you have multiple ConfigMaps, one for each environment
+ConfigMap is created and added to the Kubernetes cluster.
+Containers in the Pod reference the ConfigMap and use its values.
+
+Mount the ConfigMap through a Volume
+      volumeMounts:
+        - name: config-volume     ---> name should be same 
+          mountPath: /usr/share/tomcat7/conf/context.xml
+          subPath: context.xml
+        - name: config-volume
+          mountPath: /usr/share/tomcat7/conf/server.xml
+          subPath: server.xml
+
+ConfigMap Reference with key value 
+      volumes:
+      - name: config-volume
+        configMap:
+          name: sn-svr2-kit-ds-config
+		  
+      - name: EC2_REGION
+        valueFrom:
+          configMapKeyRef:
+             name: cloud-config
+             key: EC2_REGION	
+			 
+kubectl create configmap ls-config --from-file=context.xml=/mnt/data/ls/config/83255/config/context.xml --from-file=server.xml=/mnt/data/ls/config/83255/config/server.xml
+			 
+kubectl create configmap special-config --from-literal=special.how=very --from-literal=special.type=charm   --from-file=abc.yaml
+We can consume the keys of this ConfigMap in a pod like so:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+    - name: test-container
+      image: gcr.io/google_containers/busybox
+      command: [ "/bin/sh", "-c", "env" ]
+      env:
+        - name: SPECIAL_LEVEL_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: special-config
+              key: special.how
+        - name: SPECIAL_TYPE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: special-config
+              key: special.type
+      envFrom:
+        - configMapRef:
+            name: env-config
+  restartPolicy: Never
+
+------------------------------------------------------------
+Update Config map for deployment without pod restart  
+------------------------------------------------------------
+The container does not restart. if the configmap is mounted as a volume it is updated dynamically. if it is an environment variable it stays as the old value until the container is restarted.volume mount the configmap into the pod, the projected file is updated periodically. NOT realtime.
+
+Have a reload endpoint for an api or project the configmap as a volume, could use inotify to be aware of the change . 
+
+---------------------
+     Annotations 
+---------------------
+
+Annotations are key/value pairs. Where labels have length limits, annotations can be quite large. It's no issue to put a URL into
+one of them. But, you can't query or select objects based on annotations. The data is available and you can do interesting things
+with it (more on that in a moment) but you can't query based on it.
+
+Build, release, or image information like timestamps, release IDs, git branch, PR numbers, image hashes, and registry address
+Pointers to logging, monitoring, analytics, or audit repositories.
+
+Annotations are an interesting way to add on functionality to your applications. While they can't be queried, annotations can be read 
+by other tooling. This is where things get interesting.
+
+If having the data available for other tooling or general information is important, put it in an annotation.
+
+Annotations attach arbitrary key-value information to an Kubernetes object. On the other hand labels should be used for meaningful information tomatch a pod with selection criteria, annotations contain less structured data. Annotations are a way of adding more metadata to an object that is not helpful for selection purposes.
+
+---------------------
+  Kuberenetes Labels 
+---------------------
+
+Kubernetes deployments also use labels to identify the pods that they manage. Similarly, Kubernetes services and replication
+controllers use labels to refer to a set of pods. Recommended Kubernetes labels also support querying and interoperability 
+between Kubernetes tools.
+
+label key (label prefix, label name) and label value.
+
+Label name :-
+Label name is required
+Label names can be up to 63 characters
+Characters have to be alphanumeric characters
+Label names can also include “-”, “_” and “.”
+Label names have to begin and end with an alphanumeric character
+
+DevOps team and come-up with standard labeling conventions for Kubernetes resources.
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: my-pod
+ labels:
+   application-ID: my-app
+   version: version-nr
+   stage: dev
+   release: release-nr
+   owner: team-kube
+
+-----------------------------------------
+Kuberntes Hpa Horizontal Pod Autoscaler
+-----------------------------------------
+
+It scales the pods in a deployment or replica set. It is implemented as a K8s API resource and a controller. 
+The controller manager queries the resource utilization against the metrics specified in each HorizontalPodAutoscaler definition. 
+It obtains the metrics from either the resource metrics API (for per-pod resource metrics), or the custom metrics API (for all other metrics).
+
+1. HPA continuously checks metrics values you configure during setup AT A DEFAULT 30 SEC intervals
+2. HPA attempts to increase the number of pods If the SPECIFIED threshold is met
+3. HPA mainly updates the number of replicas inside the deployment or replication controller
+4. The Deployment/Replication Controller WOULD THEN roll-out ANY additional needed pods
+
+kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10
+
+
+kubectl get hpa
+
+NAME         REFERENCE                     TARGET    MINPODS   MAXPODS   REPLICAS   AGE
+php-apache   Deployment/php-apache/scale   0% / 50%  1         10        1          18s
+
+-----------------------------------------------------
+Autoscaling on multiple metrics and custom metrics
+----------------------------------------------------
+
+You can introduce additional metrics to use when autoscaling the php-apache Deployment by making use of the autoscaling/v2beta2 API version.
+
+First, get the YAML of your HorizontalPodAutoscaler in the autoscaling/v2beta2 form:
+
+kubectl get hpa.v2beta2.autoscaling -o yaml > /tmp/hpa-v2.yaml
+
+---------------------------------------
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+status:
+  observedGeneration: 1
+  lastScaleTime: <some-time>
+  currentReplicas: 1
+  desiredReplicas: 1
+  currentMetrics:
+  - type: Resource
+    resource:
+      name: cpu
+      current:
+        averageUtilization: 0
+        averageValue: 0
+
+-----------------------------------
+		
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: hpa-example
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: hpa-example
+    spec:
+      containers:
+      - name: hpa-example
+        image: gcr.io/google_containers/hpa-example
+        ports:
+        - name: http-port
+          containerPort: 80
+        resources:
+          requests:
+            cpu: 200m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpa-example
+spec:
+  ports:
+  - port: 31001
+    nodePort: 31001
+    targetPort: http-port
+    protocol: TCP
+  selector:
+    app: hpa-example
+  type: NodePort
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-example-autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: hpa-example
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+
+
+--------------------------------------
+Kuberntes Vertical Pods Autoscaler
+--------------------------------------
+Vertical Pods Autoscaler (VPA) allocates more (or less) cpu or memory to existing pods.
+
+It can work for both stateful and stateless pods but it is built mainly for stateful services.
+VPA can also reacts to OOM (out of memory) events. VPA requires currently for the pods to be restarted to change allocated cpu and memory.
+You can set the min and max of resources that the VPA can allocate to any of your pods .
+Changes in resources are not yet possible without restarting the pod.
+VPA and HPA are not yet compatible with each other and cannot work on the same pods. 
+
+1. VPA continuously checks metrics values you configured during setup AT A DEFAULT 10 SEC intervals
+2. VPA attempts to change the allocated memory and/or CPU If the threshold is met
+3. VPA mainly updates the resources inside the deployment or replication controller specs
+4. When pods are restarted the new resources all applied to the created instances.
+
+Example -1
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-example-autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: hpa-example
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+
+----
+*/5 * * * * /bin/bash /opt/kubernetes/memory-based-autoscaling.sh --action deploy-pod-autoscaling --deployment xxxxxx --scaleup 80 --scaledown 20 > /dev/null 2>&
+*/5 * * * * /bin/bash /opt/kubernetes/memory-based-autoscaling.sh --action deploy-heap-autoscaling --deployment xxxxxx --scaleup 80 --scaledown 20 > /dev/null 2>&1
+
+wget http://hpa-example.default.svc.cluster.local:31001
+
+while true; do wget -q -O- http://hpa-example.default.svc.cluster.local:31001; done
+
+Example-2
+Deploy a Sample App
+kubectl run php-apache --image=k8s.gcr.io/hpa-example --requests=cpu=200m --expose --port=80
+
+Create an HPA resource
+kubectl autoscale deployment php-apache --cpu-percent=50 --min=1 --max=10
+kubectl get hpa
+
+Generate load to trigger scaling
+kubectl run -i --tty load-generator --image=busybox /bin/sh
+while true; do wget -q -O - http://php-apache; done
+kubectl get hpa -w
+
+----------------------------------
+Kuberntes Cluster Autoscaler (CA)
+----------------------------------	
+
+The Cluster Autoscaler (CA) manages scalability by scaling the number of nodes inside your Cluster.
+Cluster Autoscaler is a tool that automatically adjusts the size of the Kubernetes cluster when one of the following conditions is true:-
+1. There are pods that failed to run in the cluster due to insufficient resources,
+2. There are nodes in the cluster that have been underutilized for an extended period of time and their pods can be placed on other existing nodes.
+
+Cluster Autoscaler (CA) scales your cluster nodes based on pending pods.
+Deploy a Metrics Server so that HPA can scale Pods in a deployment based on CPU/memory data provided by an API
+The metrics.k8s.io API is usually provided by the metrics-server (which collects the CPU and memory metrics from the Summary API, as exposed by Kubelet on each node).
+
+1. The CA checks for pods in pending state at a default interval of 10 seconds.
+2. When If there is one or more pods in pending state because of there are not enough available resources on the cluster to allocate on the cluster them, 
+then it attempts to provision one or more additional nodes.
+3. When the node is granted by the cloud provider, the node is joined to the cluster and becomes ready to serve pods.
+4. Kubernetes scheduler allocates the pending pods to the new node. If some pods are still in pending state, the process is repeated and more nodes are added
+ to the cluster.
+
+Tag use for scaling :- 
+Key: k8s.io/cluster-autoscaler/enabled
+Key: k8s.io/cluster-autoscaler/awsExampleClusterName
+
+-----------------------------------
+             Heapster
+-----------------------------------
+Heapster is a cluster-wide aggregator of data provided by Kubelet running on each node. This container management tool is supported
+natively on Kubernetes cluster and runs as a pod, just like any other pod in the cluster. So, it basically discovers all nodes in the 
+cluster and queries usage information from the Kubernetes nodes in the cluster, via on-machine Kubernetes agent.
+
+Heapster: Installed as a pod inside of Kubernetes, it gathers data and events from the containers and pods within the cluster.
+Prometheus: Open source Cloud Native Computing Foundation (CNCF) project that offers powerful querying capabilities, visualization and alerting.
+Grafana:  Used in conjunction with Heapster for visualizing data within your Kubernetes environment.
+InfluxDB: A highly-available database platform that stores the data captured by all the Heapster pods.
+CAdvisor:  focuses on container level performance and resource usage. This comes embedded directly into kubelet and should automatically 
+discover active containers.
+
+-----------------------------------
+Accessing Secrets inside a Pod
+-----------------------------------
+Secrets are sensitive information and in this context, they are login credentials of the user. Secrets are objects in Kubernetes which stores 
+sensitive information namely the user name and the passwords after encrypting them.
+
+To use Secrets inside Pods, choose to expose pods in environment variables or mount the Secrets as volumes.
+
+apiVersion: v1
+kind: Pod
+metadata:
+   name: secret-pod-env
+spec:
+  containers:
+  - name: ubuntu
+    image: ubuntu
+    command: ["/bin/sh", "-c", "while : ;do echo $ACCESS_TOKEN; sleep 10; done"]
+    env:
+        - name: ACCESS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: access-token
+              key: wswswsdswsw
+
+
+kubectl create -f env.yaml
+
+---------------------
+    DNS Works in K8s 
+---------------------
+DNS is a built-in service in Kubernetes.
+
+It gets  launched automatically when Kubernetes is setup for the first time.
+
+Kubernetes Domain Name Server schedules a DNS Pod and Service on the cluster, and setup the kubelets to inform individual containers to use the DNS Service’s IP to resolve DNS names. 
+
+Every Service which gets defined in the Kubernetes cluster (including the DNS server itself) is assigned with a DNS name. 
+By default, a client Pod’s DNS search list will include the Pod’s own namespace and the cluster’s default domain. 
+
+For E.g. if we have a Service named serve1 in the Kubernetes namespace ns1. A Pod running in namespace ns1 can look up this service by simply doing a DNS query for serve1.
+
+A Pod running in namespace collab can look up this service by doing a DNS query for serve1.ns1.
+
+default.svc.cluster.local 
